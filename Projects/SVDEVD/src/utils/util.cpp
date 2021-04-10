@@ -104,3 +104,21 @@ void vector_to_file(vector_t V, const char* path) {
     }
     output.close();
 }
+
+bool modulus_pair(int num_blocks, int index, int iteration, int* i, int* j) {
+    if (iteration < (num_blocks - (2 * index))) {
+        *i = index + iteration;
+        *j = num_blocks - index - 1;
+        return false;
+    }
+    else if (iteration == (num_blocks - (2 * index))) {
+        *i = index + iteration - (num_blocks / 2);
+        *j = index + iteration;
+        return true;
+    }
+    else {
+        *i = (num_blocks / 2) - index;
+        *j = index + iteration - (num_blocks / 2);
+        return false;
+    }
+}

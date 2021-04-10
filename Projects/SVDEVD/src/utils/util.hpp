@@ -80,3 +80,5 @@ void reorder_decomposition(struct vector_t vals, struct matrix_t* matrices, int 
 void matrix_from_file(matrix_t A, const char *path);
 void matrix_to_file(matrix_t A, const char *path);
 void vector_to_file(vector_t V, const char* path);
+
+bool modulus_pair(int num_blocks, int index, int iteration, int* i, int* j);

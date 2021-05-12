@@ -45,7 +45,8 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>Intel C++ Compiler 2021</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
-    <UseInteloneMKL>Sequential</UseInteloneMKL>
+    <UseInteloneMKL>Parallel</UseInteloneMKL>
+    <UseILP64Interfaces1A>true</UseILP64Interfaces1A>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -54,7 +55,8 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <UseInteloneMKL>Parallel</UseInteloneMKL>
-    <UseILP64Interfaces1A>false</UseILP64Interfaces1A>
+    <UseILP64Interfaces1A>true</UseILP64Interfaces1A>
+    <OpenMPOffloading>true</OpenMPOffloading>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -120,6 +122,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <OpenMP>GenerateParallelCode</OpenMP>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -134,6 +137,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <OpenMP>GenerateParallelCode</OpenMP>
+      <OpenMPOffloading>GenerateSPIR64Fat</OpenMPOffloading>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -143,21 +148,56 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="alglib\alglibinternal.cpp" />
+    <ClCompile Include="alglib\alglibmisc.cpp" />
+    <ClCompile Include="alglib\ap.cpp" />
+    <ClCompile Include="alglib\dataanalysis.cpp" />
+    <ClCompile Include="alglib\diffequations.cpp" />
+    <ClCompile Include="alglib\fasttransforms.cpp" />
+    <ClCompile Include="alglib\integration.cpp" />
+    <ClCompile Include="alglib\interpolation.cpp" />
+    <ClCompile Include="alglib\linalg.cpp" />
+    <ClCompile Include="alglib\optimization.cpp" />
+    <ClCompile Include="alglib\solvers.cpp" />
+    <ClCompile Include="alglib\specialfunctions.cpp" />
+    <ClCompile Include="alglib\statistics.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="LocalData\in\rectangle.in" />
     <None Include="LocalData\in\square.in" />
+    <None Include="LocalData\in\square\100_100.in" />
+    <None Include="LocalData\in\square\80_80.in" />
     <None Include="LocalData\in\symmetric.in" />
     <None Include="LocalData\out\SVD\dgesvj\square\A.to" />
     <None Include="LocalData\out\SVD\dgesvj\square\U.to" />
     <None Include="LocalData\out\SVD\dgesvj\square\V.to" />
+    <None Include="LocalData\tests\seq\SVD\dgesvj\square\size_per_time.to" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="alglib\alglibinternal.h" />
+    <ClInclude Include="alglib\alglibmisc.h" />
+    <ClInclude Include="alglib\ap.h" />
+    <ClInclude Include="alglib\dataanalysis.h" />
+    <ClInclude Include="alglib\diffequations.h" />
+    <ClInclude Include="alglib\fasttransforms.h" />
+    <ClInclude Include="alglib\integration.h" />
+    <ClInclude Include="alglib\interpolation.h" />
+    <ClInclude Include="alglib\linalg.h" />
+    <ClInclude Include="alglib\optimization.h" />
+    <ClInclude Include="alglib\solvers.h" />
+    <ClInclude Include="alglib\specialfunctions.h" />
+    <ClInclude Include="alglib\statistics.h" />
+    <ClInclude Include="alglib\stdafx.h" />
     <ClInclude Include="types.hpp">
       <DeploymentContent>true</DeploymentContent>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SVDEVD\SVDEVD.vcxproj">
+      <Project>{318d341b-45e7-4eef-904f-51d62ebb7ecd}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

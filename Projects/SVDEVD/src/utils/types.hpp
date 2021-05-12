@@ -22,5 +22,5 @@ struct index_t {
 /**
  * 32-byte (256 bits) aligned vector.
  */
-template <typename T>
-using aligned_vector = std::vector<T, boost::alignment::aligned_allocator<T, 32>>;
+//template <typename T>
+//using aligned_vector = std::vector<T, boost::alignment::aligned_allocator<T, 32>>;

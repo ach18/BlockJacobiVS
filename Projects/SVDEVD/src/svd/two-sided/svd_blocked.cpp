@@ -46,20 +46,25 @@ size_t svd_blocked(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t U
     assert(n_blocks * block_size == n);
 
     //выделение памяти для хранения блоков матриц B U V M1 M2
-    double* memory_block = (double*)malloc((4 + 4 + 4 + 1 + 1) * block_size * block_size * sizeof(double));
-    double* Bblock = memory_block;
-    double* Ublock = Bblock + 4 * block_size * block_size;
-    double* Vblock = Ublock + 4 * block_size * block_size;
+    //double* memory_block = (double*)malloc((4 + 4 + 4 + 1 + 1) * block_size * block_size * sizeof(double));
+    //double* Bblock = memory_block;
+    std::vector<double> Bblock(4 * block_size * block_size);
+    //double* Ublock = Bblock + 4 * block_size * block_size;
+    std::vector<double> Ublock(4 * block_size * block_size);
+    //double* Vblock = Ublock + 4 * block_size * block_size;
+    std::vector<double> Vblock(4 * block_size * block_size);
     //M1 M2 хранят промежуточные значения вычислений
-    double* M1 = Vblock + 4 * block_size * block_size;
-    double* M2 = M1 + block_size * block_size;
+    //double* M1 = Vblock + 4 * block_size * block_size;
+    std::vector<double> M1(block_size * block_size);
+    //double* M2 = M1 + block_size * block_size;
+    std::vector<double> M2(block_size * block_size);
 
     //хранение блоков в виде структур matrix_t
-    matrix_t Bblockmat = { Bblock, 2 * block_size, 2 * block_size };
-    matrix_t Ublockmat = { Ublock, 2 * block_size, 2 * block_size };
-    matrix_t Vblockmat = { Vblock, 2 * block_size, 2 * block_size };
-    matrix_t M1mat = { M1, block_size, block_size };
-    matrix_t M2mat = { M2, block_size, block_size };
+    matrix_t Bblockmat = { &Bblock[0], 2 * block_size, 2 * block_size };
+    matrix_t Ublockmat = { &Ublock[0], 2 * block_size, 2 * block_size };
+    matrix_t Vblockmat = { &Vblock[0], 2 * block_size, 2 * block_size };
+    matrix_t M1mat = { &M1[0], block_size, block_size };
+    matrix_t M2mat = { &M2[0], block_size, block_size };
 
     //основной цикл развретки, он продолжается пока 
     while (sqrt(off_norm) > tol * sqrt(norm)) {
@@ -135,7 +140,7 @@ size_t svd_blocked(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t U
         sweeps++;
     }
 
-    free(memory_block);
+    //free(memory_block);
 
     return sweeps;
 }

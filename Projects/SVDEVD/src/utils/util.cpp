@@ -34,6 +34,23 @@ void sym_jacobi_coeffs(double x_ii, double x_ij, double x_jj, double* c, double*
     }
 }
 
+void jrs_jacobi_coeffs(double x_ii, double x_ij, double x_jj, double* c, double* s) {
+    if (!isclose(x_ij, 0)) {
+        //if(x_ij != 0) {
+        double tau, t, out_c;
+        tau = (x_jj - x_ii) / (2 * x_ij);
+        t = sign(tau) / (abs(tau) + sqrt(1 + (tau * tau)));
+        //t = sign(tau) / (abs(tau) + sqrt(1 + tau * tau));
+        out_c = 1.0 / sqrt(1 + (t * t));
+        *c = out_c;
+        *s = t * out_c;
+    }
+    else {
+        *c = 1.0;
+        *s = 0.0;
+    }
+}
+
 int less(double x, double y) { return x < y; }
 
 int greater(double x, double y) { return x > y; }
@@ -72,6 +89,7 @@ void reorder_decomposition(struct vector_t vals, struct matrix_t* matrices, int 
     }
 }
 
+//строчное представление в памяти
 void matrix_from_file(matrix_t A, const char *path) {
     std::ifstream file;
     file.open(path);
@@ -82,6 +100,7 @@ void matrix_from_file(matrix_t A, const char *path) {
     file.close();
 }
 
+//строчное представление в памяти
 void matrix_to_file(matrix_t A, const char *path) {
     std::ofstream output(path);
     int n = A.rows;
@@ -121,4 +140,45 @@ bool modulus_pair(int num_blocks, int index, int iteration, int* i, int* j) {
         *j = index + iteration - (num_blocks / 2);
         return false;
     }
+}
+
+void round_robin(size_t* up, size_t* dn, size_t ThreadsNum) {
+    size_t x = up[ThreadsNum - 1];
+    size_t y = dn[0];
+
+    for (size_t i = (ThreadsNum - 1); i > 0; i--)
+        up[i] = up[i - 1];
+
+    if (ThreadsNum > 2) {
+        for (size_t i = 0; i < (ThreadsNum - 2); i++)
+            dn[i] = dn[i + 1];
+    }
+
+    up[0] = y;
+    dn[ThreadsNum - 2] = x;
+}
+
+bool column_limits(struct matrix_t A, size_t ThreadsNum, struct index_t* SOB) {
+    size_t quotient = (A.cols / (2 * ThreadsNum)); //размер блоков при кратном деленим
+    size_t remainder = A.cols % (2 * ThreadsNum); //число блоков размера (quotient + 1) при делении с остатком
+    size_t multiple = (2 * ThreadsNum) - remainder; //число блоков размера quotient при кратном делении
+
+    if (quotient < 2)
+        return false;
+
+    SOB[0].i = 0;
+    SOB[0].j = quotient - 1;
+
+    for (size_t i = 1; i < multiple; i++) {
+        SOB[i].i = SOB[i - 1].j + 1;
+        SOB[i].j = SOB[i].i + (quotient - 1);
+    }
+
+    if (remainder > 0) {
+        for (size_t i = multiple; i < (multiple + remainder); i++) {
+            SOB[i].i = SOB[i - 1].j + 1;
+            SOB[i].j = SOB[i].i + quotient;
+        }
+    }
+    return true;
 }

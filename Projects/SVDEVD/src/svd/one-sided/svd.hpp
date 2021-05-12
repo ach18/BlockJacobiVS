@@ -9,4 +9,7 @@
  * @param size_t n_iter число необходимых для сходимости разверток
  * @return size_t sweeps число разверток методом Якоби
  **/
-size_t svd(struct matrix_t A, struct vector_t s, struct matrix_t U, struct matrix_t V, size_t n_iter = 100);
+size_t sohjac(struct matrix_t A, struct vector_t s, struct matrix_t U, struct matrix_t V);
+
+size_t sbjrs(struct matrix_t A, struct vector_t s, struct matrix_t U, struct matrix_t V, size_t ThreadsNum, double* Time);
+size_t pbjrs(struct matrix_t A, struct vector_t s, struct matrix_t U, struct matrix_t V, size_t ThreadsNum, double* Time);

@@ -33,6 +33,7 @@ bool is_normalized(double v);
  * @param[out] s Sine value.
  */
 void sym_jacobi_coeffs(double x_ii, double x_ij, double x_jj, double* c, double* s);
+void jrs_jacobi_coeffs(double x_ii, double x_ij, double x_jj, double* c, double* s);
 
 /**
  * Comparator function that returns 1 (true) if the first element comes before
@@ -82,3 +83,6 @@ void matrix_to_file(matrix_t A, const char *path);
 void vector_to_file(vector_t V, const char* path);
 
 bool modulus_pair(int num_blocks, int index, int iteration, int* i, int* j);
+
+bool column_limits(struct matrix_t A, size_t ThreadsNum, struct index_t* SOB);
+void round_robin(size_t* up, size_t* dn, size_t ThreadsNum);

@@ -19,6 +19,8 @@ void copy_block(struct matrix_t Smat, size_t blockS_row, size_t blockS_col, stru
             D[Dbeg + i * nD + j + 5] = S[Sbeg + i * nS + j + 5];
             D[Dbeg + i * nD + j + 6] = S[Sbeg + i * nS + j + 6];
             D[Dbeg + i * nD + j + 7] = S[Sbeg + i * nS + j + 7];
+            //D[Dbeg + i * nD + j + 8] = S[Sbeg + i * nS + j + 8];
+            //D[Dbeg + i * nD + j + 9] = S[Sbeg + i * nS + j + 9];
         }
     }
 }
@@ -28,11 +30,13 @@ static inline void inner_product(size_t n, double* A, size_t lda, double* B, siz
     double* C_2 = C_1 + ldc;
     double* C_3 = C_2 + ldc;
     double* C_4 = C_3 + ldc;
+    //double* C_5 = C_4 + ldc;
 
     double* A_1 = A;
     double* A_2 = A_1 + lda;
     double* A_3 = A_2 + lda;
     double* A_4 = A_3 + lda;
+    //double* A_5 = A_4 + lda;
 
     __m256d c[8];
 
@@ -44,6 +48,8 @@ static inline void inner_product(size_t n, double* A, size_t lda, double* B, siz
     c[5] = _mm256_setzero_pd();
     c[6] = _mm256_setzero_pd();
     c[7] = _mm256_setzero_pd();
+    //c[8] = _mm256_setzero_pd();
+    //c[9] = _mm256_setzero_pd();
 
     for (size_t p = 0; p < n; p += 1) {
         __m256d b = _mm256_load_pd(B);
@@ -54,6 +60,7 @@ static inline void inner_product(size_t n, double* A, size_t lda, double* B, siz
         __m256d a2 = _mm256_broadcast_sd(A_2++);
         __m256d a3 = _mm256_broadcast_sd(A_3++);
         __m256d a4 = _mm256_broadcast_sd(A_4++);
+        //__m256d a5 = _mm256_broadcast_sd(A_5++);
 
         c[0] = _mm256_fmadd_pd(a1, b, c[0]);
         c[1] = _mm256_fmadd_pd(a1, b1, c[1]);
@@ -63,6 +70,8 @@ static inline void inner_product(size_t n, double* A, size_t lda, double* B, siz
         c[5] = _mm256_fmadd_pd(a3, b1, c[5]);
         c[6] = _mm256_fmadd_pd(a4, b, c[6]);
         c[7] = _mm256_fmadd_pd(a4, b1, c[7]);
+        /*c[8] = _mm256_fmadd_pd(a5, b, c[8]);
+        c[9] = _mm256_fmadd_pd(a5, b1, c[9]);*/
     }
 
     _mm256_store_pd(C_1, c[0]);
@@ -73,8 +82,11 @@ static inline void inner_product(size_t n, double* A, size_t lda, double* B, siz
     _mm256_store_pd(C_3 + 4, c[5]);
     _mm256_store_pd(C_4, c[6]);
     _mm256_store_pd(C_4 + 4, c[7]);
+    //_mm256_store_pd(C_5, c[8]);
+    //_mm256_store_pd(C_5 + 5, c[9]);
 }
 
+//векторизация только для 8 элементов(нужно 10)
 static inline void inner_add_product(size_t n, double* A, size_t lda, double* B, size_t ldb, double* C, size_t ldc,
     double* D, size_t ldd) {
     double* A_1 = A;
@@ -154,6 +166,7 @@ void mult_block(struct matrix_t Amat, size_t blockA_row, size_t blockA_col, stru
 }
 
 // perform D = C + AB
+// векторизация только для 8 элементов (нужно 10)
 void mult_add_block(struct matrix_t Amat, size_t blockA_row, size_t blockA_col, struct matrix_t Bmat, size_t blockB_row,
     size_t blockB_col, struct matrix_t Cmat, size_t blockC_row, size_t blockC_col, struct matrix_t Dmat,
     size_t blockD_row, size_t blockD_col, size_t block_size) {
@@ -178,6 +191,7 @@ void mult_add_block(struct matrix_t Amat, size_t blockA_row, size_t blockA_col, 
     }
 }
 
+//векторизация только для 8 элементов (нужно 10)
 static inline void inner_product_left_tr(size_t n, double* A, size_t lda, double* B, size_t ldb, double* C,
     size_t ldc) {
     double* C_1 = C;
@@ -228,6 +242,7 @@ static inline void inner_product_left_tr(size_t n, double* A, size_t lda, double
     _mm256_store_pd(C_4 + 4, c[7]);
 }
 
+//векторизация только для 8 элементов (нужно 10)
 static inline void inner_add_product_left_tr(size_t n, double* A, size_t lda, double* B, size_t ldb, double* C,
     size_t ldc, double* D, size_t ldd) {
     double* C_1 = C;
@@ -285,6 +300,7 @@ static inline void inner_add_product_left_tr(size_t n, double* A, size_t lda, do
 
 // perform C = (A^T)B
 // for C_ij, use ith column of A and jth column of B
+// векторизация только для 8 элементов (нужно 10)
 void mult_transpose_block(struct matrix_t Amat, size_t blockA_row, size_t blockA_col, struct matrix_t Bmat,
     size_t blockB_row, size_t blockB_col, struct matrix_t Cmat, size_t blockC_row,
     size_t blockC_col, size_t block_size) {
@@ -307,6 +323,7 @@ void mult_transpose_block(struct matrix_t Amat, size_t blockA_row, size_t blockA
 
 // perform D = C + (A^T)B
 // for D_ij, use ith column of A and jth column of B.
+// векторизация только для 8 элементов(нужно 10)
 void mult_add_transpose_block(struct matrix_t Amat, size_t blockA_row, size_t blockA_col, struct matrix_t Bmat,
     size_t blockB_row, size_t blockB_col, struct matrix_t Cmat, size_t blockC_row,
     size_t blockC_col, struct matrix_t Dmat, size_t blockD_row, size_t blockD_col,
@@ -342,6 +359,7 @@ static inline __m128d hsum_double_avx(__m256d v) {
     return _mm_add_pd(vlow, high64);  // reduce to scalar
 }
 
+//векторизация только для 8 элементов(нужно 10)
 static inline void inner_product_tr(size_t n, double* A, size_t lda, double* B, size_t ldb, double* C, size_t ldc) {
     double* A_1 = A;
     double* A_2 = A_1 + lda;
@@ -401,6 +419,7 @@ static inline void inner_product_tr(size_t n, double* A, size_t lda, double* B, 
     _mm_store_pd(C_4, _mm_shuffle_pd(c30, c31, 0));
 }
 
+//векторизация только для 8 элементов (нужно 10)
 static inline void inner_add_product_tr(size_t n, double* A, size_t lda, double* B, size_t ldb, double* C, size_t ldc,
     double* D, size_t ldd) {
     double* A_1 = A;
@@ -472,6 +491,7 @@ static inline void inner_add_product_tr(size_t n, double* A, size_t lda, double*
 }
 
 // perform C = A(B^T)
+// векторизация только для 8 элементов (нужно 10)
 void mult_transpose_block_right(struct matrix_t Amat, size_t blockA_row, size_t blockA_col, struct matrix_t Bmat,
     size_t blockB_row, size_t blockB_col, struct matrix_t Cmat, size_t blockC_row,
     size_t blockC_col, size_t block_size) {
@@ -492,6 +512,7 @@ void mult_transpose_block_right(struct matrix_t Amat, size_t blockA_row, size_t 
 }
 
 // perform C = C + A(B^T)
+// векторизация только для 8 элементов (нужно 10)
 void mult_add_transpose_block_right(struct matrix_t Amat, size_t blockA_row, size_t blockA_col, struct matrix_t Bmat,
     size_t blockB_row, size_t blockB_col, struct matrix_t Cmat, size_t blockC_row,
     size_t blockC_col, struct matrix_t Dmat, size_t blockD_row, size_t blockD_col,

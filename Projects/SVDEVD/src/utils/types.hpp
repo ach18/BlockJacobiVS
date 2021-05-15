@@ -19,6 +19,14 @@ struct index_t {
     size_t j;
 };
 
+struct compute_params {
+    size_t m;
+    size_t n;
+    size_t threads;
+    size_t iterations;
+    double time;
+};
+
 /**
  * 32-byte (256 bits) aligned vector.
  */

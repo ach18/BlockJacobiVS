@@ -2,6 +2,8 @@
 #include "../../utils/types.hpp"
 
 /**
+* ќдносторонний метод якоби (Hestenes Jacobi), 
+  элементы выбираютс€ последовательно по столбцу матрицы
  * @param matrix_t Amat симметрична€ квадратна€ (или пр€моугольна€) матрица A
  * @param vector_t svec вектор сингул€рных чисел
  * @param matrix_t Umat матрица левых сингул€рных векторов
@@ -9,7 +11,10 @@
  * @param size_t n_iter число необходимых дл€ сходимости разверток
  * @return size_t sweeps число разверток методом якоби
  **/
-size_t sohjac(struct matrix_t A, struct vector_t s, struct matrix_t U, struct matrix_t V);
+size_t coloshjac(struct matrix_t A, struct vector_t s, struct matrix_t U, struct matrix_t V, size_t ThreadsNum, double* Time);
 
-size_t sbjrs(struct matrix_t A, struct vector_t s, struct matrix_t U, struct matrix_t V, size_t ThreadsNum, double* Time);
-size_t pbjrs(struct matrix_t A, struct vector_t s, struct matrix_t U, struct matrix_t V, size_t ThreadsNum, double* Time);
+/**
+* Ѕлочный односторонний метод якоби (Block Jacobi Relaxasion),
+* Ѕлоки выбираютс€ в соответствии со стратегией шахматного турнира (Round Robin) 
+**/
+size_t rrbjrs(struct matrix_t A, struct vector_t s, struct matrix_t U, struct matrix_t V, size_t ThreadsNum, double* Time);

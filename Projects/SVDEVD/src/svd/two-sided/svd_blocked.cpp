@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <omp.h>
 #include <math.h>
 #include <stdlib.h>
 #include <algorithm>
@@ -18,8 +19,8 @@
  * @param size_t block_size размер блока матрицы Bmat
  * @return size_t sweeps число разверток методом Якоби
  **/
-size_t svd_blocked(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat, struct matrix_t Vmat,
-    size_t block_size) {
+size_t colbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat, struct matrix_t Vmat,
+    size_t block_size, size_t ThreadsNum, double* Time) {
 
     size_t sweeps = 0;  //число повторений цикла развертки
     size_t block_iter = 0;
@@ -46,17 +47,11 @@ size_t svd_blocked(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t U
     assert(n_blocks * block_size == n);
 
     //выделение памяти для хранения блоков матриц B U V M1 M2
-    //double* memory_block = (double*)malloc((4 + 4 + 4 + 1 + 1) * block_size * block_size * sizeof(double));
-    //double* Bblock = memory_block;
     std::vector<double> Bblock(4 * block_size * block_size);
-    //double* Ublock = Bblock + 4 * block_size * block_size;
     std::vector<double> Ublock(4 * block_size * block_size);
-    //double* Vblock = Ublock + 4 * block_size * block_size;
     std::vector<double> Vblock(4 * block_size * block_size);
     //M1 M2 хранят промежуточные значения вычислений
-    //double* M1 = Vblock + 4 * block_size * block_size;
     std::vector<double> M1(block_size * block_size);
-    //double* M2 = M1 + block_size * block_size;
     std::vector<double> M2(block_size * block_size);
 
     //хранение блоков в виде структур matrix_t
@@ -69,6 +64,7 @@ size_t svd_blocked(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t U
     //основной цикл развретки, он продолжается пока 
     while (sqrt(off_norm) > tol * sqrt(norm)) {
         //цикл обхода над/поддиагональных блоков
+#pragma omp parallel for shared(Bmat, block_size) private(i_block, n_blocks) schedule(static)
         for (size_t i_block = 0; i_block < n_blocks - 1; ++i_block) {
             for (size_t j_block = i_block + 1; j_block < n_blocks; ++j_block) {
                 //в Bblockmat копируются блоки с индексами ii ij ji jj из матрицы Bmat

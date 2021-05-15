@@ -5,7 +5,6 @@
 #include "types.hpp"
 #include <iostream>
 #include <fstream>
-#include "boost/format.hpp"
 
 bool isclose(double x, double y, double eps) { return fabs(x - y) <= eps * fabs(x + y); }
 
@@ -103,13 +102,28 @@ void matrix_from_file(matrix_t A, const char *path) {
 //строчное представление в памяти
 void matrix_to_file(matrix_t A, const char *path) {
     std::ofstream output(path);
-    int n = A.rows;
+    int n = A.cols;
 
     for (size_t i = 0; i < A.rows; ++i) {
         for (size_t j = 0; j < A.cols; ++j) {
-            output << boost::format{ "%f" } % A.ptr[n * i + j] << " \t";
+            output << std::fixed << A.ptr[n * i + j] << " \t";
         }
         output << "\n";
+    }
+    output.close();
+}
+
+void compute_params_to_file(std::vector<compute_params> params, const char* path) {
+    std::ofstream output(path);
+    output << "|rows|\t|cols|\t|threads|\t|iterations|\t|time|" << "\n\n";
+
+    for (size_t i = 0; i < params.size(); i++) {
+        output << std::fixed << params[i].m << "\t" 
+            << std::fixed << params[i].n << "\t"
+            << std::fixed << params[i].threads << "\t"
+            << std::fixed << params[i].iterations << "\t"
+            << std::fixed << params[i].time << "\t"
+            << "\n";
     }
     output.close();
 }
@@ -119,7 +133,7 @@ void vector_to_file(vector_t V, const char* path) {
     int n = V.len;
 
     for (size_t i = 0; i < n; ++i) {
-        output << boost::format{ "%f" } % V.ptr[i] << " \t";
+        output << std::fixed << V.ptr[i] << " \t";
     }
     output.close();
 }
@@ -154,8 +168,10 @@ void round_robin(size_t* up, size_t* dn, size_t ThreadsNum) {
             dn[i] = dn[i + 1];
     }
 
-    up[0] = y;
-    dn[ThreadsNum - 2] = x;
+    if (ThreadsNum > 1) {
+        up[0] = y;
+        dn[ThreadsNum - 2] = x;
+    }
 }
 
 bool column_limits(struct matrix_t A, size_t ThreadsNum, struct index_t* SOB) {
@@ -181,4 +197,9 @@ bool column_limits(struct matrix_t A, size_t ThreadsNum, struct index_t* SOB) {
         }
     }
     return true;
+}
+
+void random_matrix(matrix_t A) {
+    for (size_t i = 0; i < (A.rows * A.cols); i++)
+        A.ptr[i] = rand() % 100;
 }

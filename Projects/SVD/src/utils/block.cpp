@@ -146,6 +146,7 @@ static inline void inner_add_product(size_t n, double* A, size_t lda, double* B,
 }
 
 // perform C = AB
+// векторизация только для 8 элементов (нужно 10)
 void mult_block(struct matrix_t Amat, size_t blockA_row, size_t blockA_col, struct matrix_t Bmat, size_t blockB_row,
     size_t blockB_col, struct matrix_t Cmat, size_t blockC_row, size_t blockC_col, size_t block_size) {
     size_t nA = Amat.rows;

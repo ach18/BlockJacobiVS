@@ -30,15 +30,6 @@ size_t coloshjac(struct matrix_t Amat, struct vector_t svec, struct matrix_t Uma
     matrix_frobenius(Amat, &norm, &off_norm);
     norm *= tol;
 
-    //assert(m > 0);
-    //assert(n > 0);
-    //assert(n_singular_vals > 0);
-    //assert(((m < n) ? m : n) == n_singular_vals);
-    //assert(m == Umat.rows);
-    //assert(n == Umat.cols);
-    //assert(m == Vmat.rows);
-    //assert(n == Vmat.cols);
-
     double* A = Amat.ptr;
     double* s = svec.ptr;
     double* U = Umat.ptr;
@@ -170,15 +161,6 @@ size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, 
         up[i] = (2 * i);
         dn[i] = (2 * i) + 1;
     }
-
-    //assert(m > 0);
-    //assert(n > 0);
-    //assert(n_singular_vals > 0);
-    //assert(((m < n) ? m : n) == n_singular_vals);
-    //assert(m == Umat.rows);
-    //assert(n == Umat.cols);
-    //assert(m == Vmat.rows);
-    //assert(n == Vmat.cols);
 
     double* A = Amat.ptr;
     double* s = svec.ptr;

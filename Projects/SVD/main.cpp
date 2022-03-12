@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
         matrix_t U_mat = { &U[0], m, n };
         matrix_t V_mat = { &V[0], m, n };
 
-        sprintf_s(in_path, "./LocalData/in/%d_%d.in", m, n);
+        sprintf(in_path, "./LocalData/in/%d_%d.in", m, n);
         try
         {
             //matrix_from_file(Data_matr, in_path);
@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
         }
         catch (const std::exception&)
         {
-            sprintf_s(errors, "[ERROR READ MATRIX] matrix from file ./LocalData/in/%d_%d.in", m, n);
+            sprintf(errors, "[ERROR READ MATRIX] matrix from file ./LocalData/in/%d_%d.in", m, n);
             std::cout << errors << std::endl;
             continue;
         }
@@ -67,12 +67,12 @@ int main(int argc, char* argv[])
 
                 size_t rrbjrs_iters = rrbjrs(Data_matr, S_vect, U_mat, V_mat, threads, &time);
                 if (rrbjrs_iters <= 0) {
-                    sprintf_s(errors, "[WARNING] Alg 'rrbjrs' not computed: matrix %d %d, %d threads", m, n, threads);
+                    sprintf(errors, "[WARNING] Alg 'rrbjrs' not computed: matrix %d %d, %d threads", m, n, threads);
                     std::cout << errors << std::endl;
                 }
                 else
                 {
-                    sprintf_s(info, "Compute alg 'rrbjrs': matrix %d %d, %d threads", m, n, threads);
+                    sprintf(info, "Compute alg 'rrbjrs': matrix %d %d, %d threads", m, n, threads);
                     std::cout << info << std::endl;
                     rrbjrs_times.push_back({ Data_matr.rows, Data_matr.cols, threads, rrbjrs_iters, time });
                 }
@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
             }
             catch (const std::exception&)
             {
-                sprintf_s(errors, "[ERROR COMPUTATION] in 'rrbjrs': matrix %d %d, %d threads", m, n, threads);
+                sprintf(errors, "[ERROR COMPUTATION] in 'rrbjrs': matrix %d %d, %d threads", m, n, threads);
                 std::cout << errors << std::endl;
             }
 
@@ -89,12 +89,12 @@ int main(int argc, char* argv[])
             {
                 size_t coloshjac_iters = coloshjac(Data_matr, S_vect, U_mat, V_mat, threads, &time);
                 if (coloshjac_iters <= 0) {
-                    sprintf_s(errors, "[WARNING] Alg 'coloshjac' not computed: matrix %d %d, %d threads", m, n, threads);
+                    sprintf(errors, "[WARNING] Alg 'coloshjac' not computed: matrix %d %d, %d threads", m, n, threads);
                     std::cout << errors << std::endl;
                 }
                 else
                 {
-                    sprintf_s(info, "Compute alg 'coloshjac': matrix %d %d, %d threads", m, n, threads);
+                    sprintf(info, "Compute alg 'coloshjac': matrix %d %d, %d threads", m, n, threads);
                     std::cout << info << std::endl;
                     coloshjac_times.push_back({ Data_matr.rows, Data_matr.cols, threads, coloshjac_iters, time });
                 }
@@ -102,7 +102,7 @@ int main(int argc, char* argv[])
             }
             catch (const std::exception&)
             {
-                sprintf_s(errors, "[ERROR COMPUTATION] in 'coloshjac': matrix %d %d, %d threads", m, n, threads);
+                sprintf(errors, "[ERROR COMPUTATION] in 'coloshjac': matrix %d %d, %d threads", m, n, threads);
                 std::cout << errors << std::endl;
             }
         }

@@ -101,7 +101,7 @@ int main(int argc, char* argv[])
         std::vector<double> A_matr(m * n);
         matrix_t Data_matr = { &A_matr[0], m, n };
         random_matrix(Data_matr);
-        sprintf_s(in_path, "./LocalData/in/%d_%d.in", m, n);
+        sprintf(in_path, "./LocalData/in/%d_%d.in", m, n);
         matrix_to_file(Data_matr, in_path);
     }
 

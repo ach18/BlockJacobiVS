@@ -1,7 +1,6 @@
 #pragma once
 #include <cstddef>
 #include <vector>
-#include "boost/align/aligned_allocator.hpp"
 
 struct vector_t {
     double* ptr;

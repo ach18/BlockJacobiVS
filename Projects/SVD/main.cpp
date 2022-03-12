@@ -6,11 +6,9 @@
 #include <vector>
 #include "src/utils/types.hpp"
 #include "src/utils/util.hpp"
-#include "src/svd/two-sided/svd.hpp"
 #include "src/svd/one-sided/svd.hpp"
 
 void svd_test(matrix_t Data_matr, matrix_t B_mat, matrix_t U_mat, matrix_t V_mat, vector_t S_vect, size_t n, size_t block_size, size_t threads, double time);
-void colbnsvd_test(matrix_t Data_matr, matrix_t B_mat, matrix_t U_mat, matrix_t V_mat, size_t block_size, size_t threads, double* time);
 
 int main(int argc, char* argv[])
 {
@@ -121,20 +119,9 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-void colbnsvd_test(matrix_t Data_matr, matrix_t B_mat, matrix_t U_mat, matrix_t V_mat, size_t block_size, size_t threads, double* time) {
-    std::cout << "Singular decomposition of double square matrix by block two-sided NSVD Jacobi" << std::endl;
-    //Блочное двустороннее сингулярное (SVD) разложение методом NSVD квадратной вещественной матрицы A
-    //NSVD алгоритм описан в работе https://maths-people.anu.edu.au/~brent/pd/rpb080i.pdf (стр. 12)
-    //Сейчас используется циклический перебор наддиагональных блоков матрицы
-    size_t iterations = colbnsvd(Data_matr, B_mat, U_mat, V_mat, block_size, threads, time);
-
-    matrix_to_file(B_mat, "./LocalData/out/SVD/NSVD/square/A.to");
-    matrix_to_file(U_mat, "./LocalData/out/SVD/NSVD/square/V.to");
-    matrix_to_file(V_mat, "./LocalData/out/SVD/NSVD/square/U.to");
-}
-
 void svd_test(matrix_t Data_matr, matrix_t B_mat, matrix_t U_mat, matrix_t V_mat, vector_t S_vect, size_t n, size_t block_size, size_t threads, double time)
 {
+	size_t iterations;
     //Инициализация матрицы A
     matrix_from_file(Data_matr, "./LocalData/in/square.in");
     assert(Data_matr.rows == Data_matr.cols);
@@ -154,20 +141,6 @@ void svd_test(matrix_t Data_matr, matrix_t B_mat, matrix_t U_mat, matrix_t V_mat
     vector_to_file(S_vect, "./LocalData/out/SVD/BJRS/square/A.to");
     matrix_to_file(U_mat, "./LocalData/out/SVD/BJRS/square/V.to");
     matrix_to_file(V_mat, "./LocalData/out/SVD/BJRS/square/U.to");
-
-    std::cout << "Singular decomposition of double square matrix by block two-sided NSVD Jacobi" << std::endl;
-    //Блочное двустороннее сингулярное (SVD) разложение методом NSVD квадратной вещественной матрицы A
-    //NSVD алгоритм описан в работе https://maths-people.anu.edu.au/~brent/pd/rpb080i.pdf (стр. 12)
-    //Сейчас используется циклический перебор наддиагональных блоков матрицы
-    size_t iterations = colbnsvd(Data_matr, B_mat, U_mat, V_mat, block_size, threads, &time);
-
-    //Запись в файлы полученных данных
-    //А - сингулярные числа матрицы
-    //U - левые сингулярные векторы
-    //V - правые сингулярные векторы
-    matrix_to_file(B_mat, "./LocalData/out/SVD/NSVD/square/A.to");
-    matrix_to_file(U_mat, "./LocalData/out/SVD/NSVD/square/V.to");
-    matrix_to_file(V_mat, "./LocalData/out/SVD/NSVD/square/U.to");
 
     std::cout << "Singular decomposition of double square matrix by one-sided Hestenes Jacobi" << std::endl;
     //Одностороннее сингулярное (SVD) разложение по столбцам методом Hestenes one-sided Jacobi квадратной (или прямоугольной) 

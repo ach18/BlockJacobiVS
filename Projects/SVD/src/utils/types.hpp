@@ -1,7 +1,6 @@
 #pragma once
 #include <cstddef>
 #include <vector>
-#include "boost/align/aligned_allocator.hpp"
 
 struct vector_t {
     double* ptr;
@@ -26,9 +25,3 @@ struct compute_params {
     size_t iterations;
     double time;
 };
-
-/**
- * 32-byte (256 bits) aligned vector.
- */
-//template <typename T>
-//using aligned_vector = std::vector<T, boost::alignment::aligned_allocator<T, 32>>;

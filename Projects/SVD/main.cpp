@@ -1,11 +1,10 @@
-﻿#define MKL_INT size_t
-#include <mkl.h>
-#include <algorithm>
-#include <omp.h>
+﻿#include <algorithm>
 #include <stdio.h>
 #include <cassert>
 #include <iostream>
 #include <vector>
+#include <omp.h>
+#include <mkl.h>
 #include "src/utils/types.hpp"
 #include "src/utils/util.hpp"
 #include "src/svd/one-sided/svd.hpp"
@@ -137,7 +136,7 @@ int main(int argc, char* argv[])
 				{
 					sprintf(info, "Compute alg MKL 'dgesvj': matrix %d %d, %d threads", m, n, threads);
 					std::cout << info << std::endl;
-					mkl_dgesvj_times.push_back({ Data_matr.rows, Data_matr.cols, threads, -1, time });
+					mkl_dgesvj_times.push_back({ Data_matr.rows, Data_matr.cols, threads, 0, time });
 				}
 
 			}

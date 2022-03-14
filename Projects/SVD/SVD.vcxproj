@@ -189,6 +189,9 @@
     <None Include="LocalData\out\SVD\Alglib\U.to" />
     <None Include="LocalData\out\SVD\Alglib\V.to" />
     <None Include="packages.config" />
+    <None Include="TimeTests\coloshjac_times.to" />
+    <None Include="TimeTests\mkl_dgesvj_times.to" />
+    <None Include="TimeTests\rrbjrs_times.to" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />

@@ -139,7 +139,7 @@ void single_dgesvj(long long n) {
 
     t_mkl1 = omp_get_wtime();
     //Описание функции dgesvj OneMKL
-    //https://software.intel.com/content/www/us/en/develop/documentation/onemkl-developer-reference-fortran/top/lapack-routines/lapack-least-squares-and-eigenvalue-problem-routines/lapack-least-squares-and-eigenvalue-problem-driver-routines/singular-value-decomposition-lapack-driver-routines/gesvj.html
+    //https://www.intel.com/content/www/us/en/develop/documentation/onemkl-developer-reference-c/top/lapack-routines/lapack-least-squares-and-eigenvalue-problem/lapack-least-squares-eigenvalue-problem-driver/singular-value-decomposition-lapack-driver/gesvj.html
     dgesvj(joba, jobu, jobv, &n, &n, &Data_square_matr.ptr[0], &lda, &S_vect.ptr[0], &mv, &V_matr.ptr[0], &ldv, &workspace[0], &lwork, &info);
     t_mkl2 = omp_get_wtime();
     t_result = t_mkl2 - t_mkl1;

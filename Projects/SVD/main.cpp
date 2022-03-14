@@ -1,4 +1,6 @@
-﻿#include <algorithm>
+﻿#define MKL_INT size_t
+#include <mkl.h>
+#include <algorithm>
 #include <omp.h>
 #include <stdio.h>
 #include <cassert>
@@ -26,6 +28,7 @@ int main(int argc, char* argv[])
 
     std::vector<compute_params> rrbjrs_times(sizes.size() * max_threads);
     std::vector<compute_params> coloshjac_times(sizes.size() * max_threads);
+	std::vector<compute_params> mkl_dgesvj_times(sizes.size() * max_threads);
 
     for (size_t i = 0; i < sizes.size(); i++) {
         m = sizes[i].i;
@@ -47,15 +50,13 @@ int main(int argc, char* argv[])
         matrix_t U_mat = { &U[0], m, n };
         matrix_t V_mat = { &V[0], m, n };
 
-        sprintf(in_path, "./LocalData/in/%d_%d.in", m, n);
         try
         {
-            //matrix_from_file(Data_matr, in_path);
             random_matrix(Data_matr);
         }
         catch (const std::exception&)
         {
-            sprintf(errors, "[ERROR READ MATRIX] matrix from file ./LocalData/in/%d_%d.in", m, n);
+            sprintf(errors, "[ERROR] Can't create %d_%d matrix", m, n);
             std::cout << errors << std::endl;
             continue;
         }
@@ -105,6 +106,46 @@ int main(int argc, char* argv[])
                 sprintf(errors, "[ERROR COMPUTATION] in 'coloshjac': matrix %d %d, %d threads", m, n, threads);
                 std::cout << errors << std::endl;
             }
+
+			//dgesvj - MKL односторонний Якоби со стратегией выбора элементов перестановки столбцов (deRijk98)
+			//void DGESVJ(const char* joba, const char* jobu, const char* jobv,
+			//	const MKL_INT* m, const MKL_INT* n, double* a, const MKL_INT* lda,
+			//	double* sva, const MKL_INT* mv, double* v, const MKL_INT* ldv,
+			//	double* work, const MKL_INT* lwork, MKL_INT* info);
+			try
+			{
+				mkl_set_num_threads(threads);
+
+				//MKL параметры
+				char joba[] = "G"; //Указывает, что входящая матрица A(mxn) имееет общий вид (m >= n)
+				char jobu[] = "U"; //Указывает, что ненулевые левые сингулярные векторы будут вычислены, и сохранены в матрице A
+				char jobv[] = "V"; //Указывает, что правые сингулярные векторы будут вычислены, и сохранены в матрице V
+				
+				MKL_INT lda = Data_matr.rows;       //Ведущая "ось" матрицы A (строки)
+				MKL_INT ldv = Data_matr.cols;       //Ведущая "ось" матрицы V (столбцы)
+				MKL_INT mv = 0;						//Применяется если jobv = "A". Не используется.
+				MKL_INT lwork = Data_matr.rows + Data_matr.cols;
+				MKL_INT dgesvj_info = -1;
+				std::vector<double> work(lwork);
+
+				dgesvj(joba, jobu, jobv, &Data_matr.rows, &Data_matr.cols, Data_matr.ptr, &lda, S_vect.ptr, &mv, V_mat.ptr, &ldv, &work[0], &lwork, &dgesvj_info);
+				if (dgesvj_info != 0) {
+					sprintf(errors, "[WARNING] Alg MKL 'dgesvj' not computed: matrix %d %d, %d threads", m, n, threads);
+					std::cout << errors << std::endl;
+				}
+				else
+				{
+					sprintf(info, "Compute alg MKL 'dgesvj': matrix %d %d, %d threads", m, n, threads);
+					std::cout << info << std::endl;
+					mkl_dgesvj_times.push_back({ Data_matr.rows, Data_matr.cols, threads, -1, time });
+				}
+
+			}
+			catch (const std::exception&)
+			{
+				sprintf(errors, "[ERROR COMPUTATION] in MKL 'dgesvj': matrix %d %d, %d threads", m, n, threads);
+				std::cout << errors << std::endl;
+			}
         }
 
     }

@@ -115,6 +115,7 @@ int main(int argc, char* argv[])
 			try
 			{
 				mkl_set_num_threads(threads);
+				double mkl_t1, mkl_t2;	//замер времени
 
 				//MKL параметры
 				char joba[] = "G"; //Указывает, что входящая матрица A(mxn) имееет общий вид (m >= n)
@@ -132,7 +133,11 @@ int main(int argc, char* argv[])
 				matrix_t MKL_matr = { &A_mkl[0], m, n }; //Инициализация копии исходной матрицы Data_matr (т.к. функция MKL изменяет её).
 				matrix_copy(MKL_matr, Data_matr);
 
+				mkl_t1 = omp_get_wtime();
 				dgesvj(joba, jobu, jobv, &MKL_matr.rows, &MKL_matr.cols, MKL_matr.ptr, &lda, S_vect.ptr, &mv, V_mat.ptr, &ldv, &work[0], &lwork, &dgesvj_info);
+				mkl_t2 = omp_get_wtime();
+				time = mkl_t2 - mkl_t1;
+
 				if (dgesvj_info != 0) {
 					sprintf(errors, "[WARNING] Alg MKL 'dgesvj' not computed: matrix %d %d, %d threads", m, n, threads);
 					std::cout << errors << std::endl;

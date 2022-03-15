@@ -9,8 +9,7 @@
 #include "src/utils/util.hpp"
 #include "src/utils/matrix.hpp"
 #include "src/svd/one-sided/svd.hpp"
-
-void svd_test(matrix_t Data_matr, matrix_t B_mat, matrix_t U_mat, matrix_t V_mat, vector_t S_vect, size_t n, size_t block_size, size_t threads, double time);
+#include "src/svd/two-sided/svd.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -170,37 +169,3 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-void svd_test(matrix_t Data_matr, matrix_t B_mat, matrix_t U_mat, matrix_t V_mat, vector_t S_vect, size_t n, size_t block_size, size_t threads, double time)
-{
-	size_t iterations;
-    //Инициализация матрицы A
-    matrix_from_file(Data_matr, "./LocalData/in/square.in");
-    assert(Data_matr.rows == Data_matr.cols);
-    assert(Data_matr.rows == B_mat.rows && Data_matr.cols == B_mat.cols);
-    assert(Data_matr.rows == U_mat.rows && Data_matr.cols == U_mat.cols);
-    assert(Data_matr.rows == V_mat.rows && Data_matr.cols == V_mat.cols);
-
-    std::cout << "Singular decomposition of double square matrix by block one-sided BJRS Jacobi" << std::endl;
-    //Блочное одностороннее сингулярное (SVD) разложение методом BJRS квадратной вещественной матрицы A
-    //BJRS алгоритм описан в работе file:///C:/Users/reado/Downloads/A_Block_JRS_Algorithm_for_Highly_Parallel_Computat.pdf (стр. 10)
-    size_t bjrs_iters = rrbjrs(Data_matr, S_vect, U_mat, V_mat, threads, &time);
-
-    //Запись в файлы полученных данных
-    //А - сингулярные числа матрицы
-    //U - левые сингулярные векторы
-    //V - правые сингулярные векторы
-    vector_to_file(S_vect, "./LocalData/out/SVD/BJRS/square/A.to");
-    matrix_to_file(U_mat, "./LocalData/out/SVD/BJRS/square/V.to");
-    matrix_to_file(V_mat, "./LocalData/out/SVD/BJRS/square/U.to");
-
-    std::cout << "Singular decomposition of double square matrix by one-sided Hestenes Jacobi" << std::endl;
-    //Одностороннее сингулярное (SVD) разложение по столбцам методом Hestenes one-sided Jacobi квадратной (или прямоугольной) 
-    // вещественной матрицы A
-    //Алгоритм описан в работе https://www.cs.utexas.edu/users/inderjit/public_papers/HLA_SVD.pdf (Algorithm 6, стр. 11)
-    //Сейчас используется циклический перебор наддиагональных блоков матрицы
-    iterations = coloshjac(Data_matr, S_vect, U_mat, V_mat, threads, &time);
-
-    matrix_to_file(U_mat, "./LocalData/out/SVD/OHJac/square/V.to");
-    matrix_to_file(V_mat, "./LocalData/out/SVD/OHJac/square/U.to");
-    vector_to_file(S_vect, "./LocalData/out/SVD/OHJac/square/A.to");
-}

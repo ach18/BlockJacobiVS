@@ -160,6 +160,10 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="src\svd\one-sided\svd.cpp" />
+    <ClCompile Include="src\svd\two-sided\nsvd.cpp" />
+    <ClCompile Include="src\svd\two-sided\svd_blocked.cpp" />
+    <ClCompile Include="src\svd\two-sided\svd_subprocedure.cpp" />
+    <ClCompile Include="src\utils\block.cpp" />
     <ClCompile Include="src\utils\matrix.cpp" />
     <ClCompile Include="src\utils\util.cpp" />
   </ItemGroup>
@@ -196,6 +200,10 @@
   <ItemGroup>
     <ClInclude Include="resource.h" />
     <ClInclude Include="src\svd\one-sided\svd.hpp" />
+    <ClInclude Include="src\svd\two-sided\nsvd.hpp" />
+    <ClInclude Include="src\svd\two-sided\svd.hpp" />
+    <ClInclude Include="src\svd\two-sided\svd_subprocedure.hpp" />
+    <ClInclude Include="src\utils\block.hpp" />
     <ClInclude Include="src\utils\matrix.hpp" />
     <ClInclude Include="src\utils\types.hpp" />
     <ClInclude Include="src\utils\util.hpp" />

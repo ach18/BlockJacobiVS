@@ -1,16 +1,16 @@
 ﻿#include <algorithm>
-#include <omp.h>
 #include <stdio.h>
 #include <cassert>
 #include <iostream>
 #include <vector>
+#include <omp.h>
+#include <mkl.h>
 #include "src/utils/types.hpp"
 #include "src/utils/util.hpp"
-#include "src/svd/two-sided/svd.hpp"
+#include "src/utils/matrix.hpp"
 #include "src/svd/one-sided/svd.hpp"
 
 void svd_test(matrix_t Data_matr, matrix_t B_mat, matrix_t U_mat, matrix_t V_mat, vector_t S_vect, size_t n, size_t block_size, size_t threads, double time);
-void colbnsvd_test(matrix_t Data_matr, matrix_t B_mat, matrix_t U_mat, matrix_t V_mat, size_t block_size, size_t threads, double* time);
 
 int main(int argc, char* argv[])
 {
@@ -28,6 +28,7 @@ int main(int argc, char* argv[])
 
     std::vector<compute_params> rrbjrs_times(sizes.size() * max_threads);
     std::vector<compute_params> coloshjac_times(sizes.size() * max_threads);
+	std::vector<compute_params> mkl_dgesvj_times(sizes.size() * max_threads);
 
     for (size_t i = 0; i < sizes.size(); i++) {
         m = sizes[i].i;
@@ -49,15 +50,13 @@ int main(int argc, char* argv[])
         matrix_t U_mat = { &U[0], m, n };
         matrix_t V_mat = { &V[0], m, n };
 
-        sprintf_s(in_path, "./LocalData/in/%d_%d.in", m, n);
         try
         {
-            //matrix_from_file(Data_matr, in_path);
             random_matrix(Data_matr);
         }
         catch (const std::exception&)
         {
-            sprintf_s(errors, "[ERROR READ MATRIX] matrix from file ./LocalData/in/%d_%d.in", m, n);
+            sprintf(errors, "[ERROR] Can't create %d_%d matrix", m, n);
             std::cout << errors << std::endl;
             continue;
         }
@@ -69,12 +68,12 @@ int main(int argc, char* argv[])
 
                 size_t rrbjrs_iters = rrbjrs(Data_matr, S_vect, U_mat, V_mat, threads, &time);
                 if (rrbjrs_iters <= 0) {
-                    sprintf_s(errors, "[WARNING] Alg 'rrbjrs' not computed: matrix %d %d, %d threads", m, n, threads);
+                    sprintf(errors, "[WARNING] Alg 'rrbjrs' not computed: matrix %d %d, %d threads", m, n, threads);
                     std::cout << errors << std::endl;
                 }
                 else
                 {
-                    sprintf_s(info, "Compute alg 'rrbjrs': matrix %d %d, %d threads", m, n, threads);
+                    sprintf(info, "Compute alg 'rrbjrs': matrix %d %d, %d threads", m, n, threads);
                     std::cout << info << std::endl;
                     rrbjrs_times.push_back({ Data_matr.rows, Data_matr.cols, threads, rrbjrs_iters, time });
                 }
@@ -82,7 +81,7 @@ int main(int argc, char* argv[])
             }
             catch (const std::exception&)
             {
-                sprintf_s(errors, "[ERROR COMPUTATION] in 'rrbjrs': matrix %d %d, %d threads", m, n, threads);
+                sprintf(errors, "[ERROR COMPUTATION] in 'rrbjrs': matrix %d %d, %d threads", m, n, threads);
                 std::cout << errors << std::endl;
             }
 
@@ -91,12 +90,12 @@ int main(int argc, char* argv[])
             {
                 size_t coloshjac_iters = coloshjac(Data_matr, S_vect, U_mat, V_mat, threads, &time);
                 if (coloshjac_iters <= 0) {
-                    sprintf_s(errors, "[WARNING] Alg 'coloshjac' not computed: matrix %d %d, %d threads", m, n, threads);
+                    sprintf(errors, "[WARNING] Alg 'coloshjac' not computed: matrix %d %d, %d threads", m, n, threads);
                     std::cout << errors << std::endl;
                 }
                 else
                 {
-                    sprintf_s(info, "Compute alg 'coloshjac': matrix %d %d, %d threads", m, n, threads);
+                    sprintf(info, "Compute alg 'coloshjac': matrix %d %d, %d threads", m, n, threads);
                     std::cout << info << std::endl;
                     coloshjac_times.push_back({ Data_matr.rows, Data_matr.cols, threads, coloshjac_iters, time });
                 }
@@ -104,9 +103,58 @@ int main(int argc, char* argv[])
             }
             catch (const std::exception&)
             {
-                sprintf_s(errors, "[ERROR COMPUTATION] in 'coloshjac': matrix %d %d, %d threads", m, n, threads);
+                sprintf(errors, "[ERROR COMPUTATION] in 'coloshjac': matrix %d %d, %d threads", m, n, threads);
                 std::cout << errors << std::endl;
             }
+
+			//dgesvj - MKL односторонний Якоби со стратегией выбора элементов перестановки столбцов (deRijk98)
+			//void DGESVJ(const char* joba, const char* jobu, const char* jobv,
+			//	const MKL_INT* m, const MKL_INT* n, double* a, const MKL_INT* lda,
+			//	double* sva, const MKL_INT* mv, double* v, const MKL_INT* ldv,
+			//	double* work, const MKL_INT* lwork, MKL_INT* info);
+			try
+			{
+				mkl_set_num_threads(threads);
+				double mkl_t1, mkl_t2;	//замер времени
+
+				//MKL параметры
+				char joba[] = "G"; //Указывает, что входящая матрица A(mxn) имееет общий вид (m >= n)
+				char jobu[] = "U"; //Указывает, что ненулевые левые сингулярные векторы будут вычислены, и сохранены в матрице A
+				char jobv[] = "V"; //Указывает, что правые сингулярные векторы будут вычислены, и сохранены в матрице V
+				
+				MKL_INT lda = Data_matr.rows;       //Ведущая "ось" матрицы A (строки)
+				MKL_INT ldv = Data_matr.cols;       //Ведущая "ось" матрицы V (столбцы)
+				MKL_INT mv = 0;						//Применяется если jobv = "A". Не используется.
+				MKL_INT lwork = Data_matr.rows + Data_matr.cols;
+				MKL_INT dgesvj_info = -1;			//Значение 0 соответствует успешному вычислению, -1 ошибка. По умолчанию -1.
+				std::vector<double> work(lwork);
+
+				std::vector<double> A_mkl(m * n);
+				matrix_t MKL_matr = { &A_mkl[0], m, n }; //Инициализация копии исходной матрицы Data_matr (т.к. функция MKL изменяет её).
+				matrix_copy(MKL_matr, Data_matr);
+
+				mkl_t1 = omp_get_wtime();
+				dgesvj(joba, jobu, jobv, &MKL_matr.rows, &MKL_matr.cols, MKL_matr.ptr, &lda, S_vect.ptr, &mv, V_mat.ptr, &ldv, &work[0], &lwork, &dgesvj_info);
+				mkl_t2 = omp_get_wtime();
+				time = mkl_t2 - mkl_t1;
+
+				if (dgesvj_info != 0) {
+					sprintf(errors, "[WARNING] Alg MKL 'dgesvj' not computed: matrix %d %d, %d threads", m, n, threads);
+					std::cout << errors << std::endl;
+				}
+				else
+				{
+					sprintf(info, "Compute alg MKL 'dgesvj': matrix %d %d, %d threads", m, n, threads);
+					std::cout << info << std::endl;
+					mkl_dgesvj_times.push_back({ Data_matr.rows, Data_matr.cols, threads, 0, time });
+				}
+
+			}
+			catch (const std::exception&)
+			{
+				sprintf(errors, "[ERROR COMPUTATION] in MKL 'dgesvj': matrix %d %d, %d threads", m, n, threads);
+				std::cout << errors << std::endl;
+			}
         }
 
     }
@@ -116,25 +164,15 @@ int main(int argc, char* argv[])
     // число потоков
     // число итераций
     // время
-    compute_params_to_file(rrbjrs_times, "./LocalData/out/tests/rrbjrs_times.to");
-    compute_params_to_file(coloshjac_times, "./LocalData/out/tests/coloshjac_times.to");
+    compute_params_to_file(rrbjrs_times, "./TimeTests/rrbjrs_times.to");
+    compute_params_to_file(coloshjac_times, "./TimeTests/coloshjac_times.to");
+	compute_params_to_file(mkl_dgesvj_times, "./TimeTests/mkl_dgesvj_times.to");
     return 0;
-}
-
-void colbnsvd_test(matrix_t Data_matr, matrix_t B_mat, matrix_t U_mat, matrix_t V_mat, size_t block_size, size_t threads, double* time) {
-    std::cout << "Singular decomposition of double square matrix by block two-sided NSVD Jacobi" << std::endl;
-    //Блочное двустороннее сингулярное (SVD) разложение методом NSVD квадратной вещественной матрицы A
-    //NSVD алгоритм описан в работе https://maths-people.anu.edu.au/~brent/pd/rpb080i.pdf (стр. 12)
-    //Сейчас используется циклический перебор наддиагональных блоков матрицы
-    size_t iterations = colbnsvd(Data_matr, B_mat, U_mat, V_mat, block_size, threads, time);
-
-    matrix_to_file(B_mat, "./LocalData/out/SVD/NSVD/square/A.to");
-    matrix_to_file(U_mat, "./LocalData/out/SVD/NSVD/square/V.to");
-    matrix_to_file(V_mat, "./LocalData/out/SVD/NSVD/square/U.to");
 }
 
 void svd_test(matrix_t Data_matr, matrix_t B_mat, matrix_t U_mat, matrix_t V_mat, vector_t S_vect, size_t n, size_t block_size, size_t threads, double time)
 {
+	size_t iterations;
     //Инициализация матрицы A
     matrix_from_file(Data_matr, "./LocalData/in/square.in");
     assert(Data_matr.rows == Data_matr.cols);
@@ -154,20 +192,6 @@ void svd_test(matrix_t Data_matr, matrix_t B_mat, matrix_t U_mat, matrix_t V_mat
     vector_to_file(S_vect, "./LocalData/out/SVD/BJRS/square/A.to");
     matrix_to_file(U_mat, "./LocalData/out/SVD/BJRS/square/V.to");
     matrix_to_file(V_mat, "./LocalData/out/SVD/BJRS/square/U.to");
-
-    std::cout << "Singular decomposition of double square matrix by block two-sided NSVD Jacobi" << std::endl;
-    //Блочное двустороннее сингулярное (SVD) разложение методом NSVD квадратной вещественной матрицы A
-    //NSVD алгоритм описан в работе https://maths-people.anu.edu.au/~brent/pd/rpb080i.pdf (стр. 12)
-    //Сейчас используется циклический перебор наддиагональных блоков матрицы
-    size_t iterations = colbnsvd(Data_matr, B_mat, U_mat, V_mat, block_size, threads, &time);
-
-    //Запись в файлы полученных данных
-    //А - сингулярные числа матрицы
-    //U - левые сингулярные векторы
-    //V - правые сингулярные векторы
-    matrix_to_file(B_mat, "./LocalData/out/SVD/NSVD/square/A.to");
-    matrix_to_file(U_mat, "./LocalData/out/SVD/NSVD/square/V.to");
-    matrix_to_file(V_mat, "./LocalData/out/SVD/NSVD/square/U.to");
 
     std::cout << "Singular decomposition of double square matrix by one-sided Hestenes Jacobi" << std::endl;
     //Одностороннее сингулярное (SVD) разложение по столбцам методом Hestenes one-sided Jacobi квадратной (или прямоугольной) 

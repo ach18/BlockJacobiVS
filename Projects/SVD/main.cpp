@@ -7,6 +7,7 @@
 #include <mkl.h>
 #include "src/utils/types.hpp"
 #include "src/utils/util.hpp"
+#include "src/utils/matrix.hpp"
 #include "src/svd/one-sided/svd.hpp"
 
 void svd_test(matrix_t Data_matr, matrix_t B_mat, matrix_t U_mat, matrix_t V_mat, vector_t S_vect, size_t n, size_t block_size, size_t threads, double time);
@@ -124,10 +125,14 @@ int main(int argc, char* argv[])
 				MKL_INT ldv = Data_matr.cols;       //Ведущая "ось" матрицы V (столбцы)
 				MKL_INT mv = 0;						//Применяется если jobv = "A". Не используется.
 				MKL_INT lwork = Data_matr.rows + Data_matr.cols;
-				MKL_INT dgesvj_info = -1;
+				MKL_INT dgesvj_info = -1;			//Значение 0 соответствует успешному вычислению, -1 ошибка. По умолчанию -1.
 				std::vector<double> work(lwork);
 
-				dgesvj(joba, jobu, jobv, &Data_matr.rows, &Data_matr.cols, Data_matr.ptr, &lda, S_vect.ptr, &mv, V_mat.ptr, &ldv, &work[0], &lwork, &dgesvj_info);
+				std::vector<double> A_mkl(m * n);
+				matrix_t MKL_matr = { &A_mkl[0], m, n }; //Инициализация копии исходной матрицы Data_matr (т.к. функция MKL изменяет её).
+				matrix_copy(MKL_matr, Data_matr);
+
+				dgesvj(joba, jobu, jobv, &MKL_matr.rows, &MKL_matr.cols, MKL_matr.ptr, &lda, S_vect.ptr, &mv, V_mat.ptr, &ldv, &work[0], &lwork, &dgesvj_info);
 				if (dgesvj_info != 0) {
 					sprintf(errors, "[WARNING] Alg MKL 'dgesvj' not computed: matrix %d %d, %d threads", m, n, threads);
 					std::cout << errors << std::endl;

@@ -35,17 +35,14 @@ size_t coloshjac(struct matrix_t Amat, struct vector_t svec, struct matrix_t Uma
     double* U = Umat.ptr;
     double* V = Vmat.ptr;
 
-    if(ThreadsNum > 1)
-        omp_set_num_threads(ThreadsNum);
+    omp_set_num_threads(ThreadsNum);
 
     t1 = omp_get_wtime();
     do
     {
         converged = true;
         // Перебор над-диагональных элементов матрицы U
-#if ThreadsNum > 1
     #pragma omp parallel for shared(converged, norm, U, V) private(i, n) schedule(static)
-#endif
         for (size_t i = 0; i < n - 1; ++i) {
             for (size_t j = i + 1; j < n; ++j) {
                 double dot_ii = 0, dot_jj = 0, dot_ij = 0;
@@ -90,9 +87,7 @@ size_t coloshjac(struct matrix_t Amat, struct vector_t svec, struct matrix_t Uma
     if (sweeps > 30)
         return 0;
 
-#if ThreadsNum > 1
     #pragma omp parallel for shared(s, U) private(i, n) schedule(static)
-#endif
     for (size_t i = 0; i < n; ++i) {
         double sigma = 0.0;
         //Вычисление сингулярных чисел
@@ -167,8 +162,7 @@ size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, 
     double* U = Umat.ptr;
     double* V = Vmat.ptr;
 
-    if(ThreadsNum > 1)
-        omp_set_num_threads(ThreadsNum);
+    omp_set_num_threads(ThreadsNum);
 
     t1 = omp_get_wtime();
 
@@ -177,9 +171,7 @@ size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, 
     {
         converged = true;
         //цикл ортогонализации блоков матрицы
-#if ThreadsNum > 1
     #pragma omp parallel for shared(converged, U, V, SOB) private(s, ThreadsNum) schedule(static, 2)
-#endif
         for (size_t s = 0; s < (2 * ThreadsNum); s++) {
             size_t ind = 0;
             for (size_t i = SOB[s].i; i <= (SOB[s].j - 1); i++) {
@@ -230,9 +222,7 @@ size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, 
         //на каждой итерации, с помощью стратегии распределения блоков между потоками (Round Robin)
         //каждый поток получает свои пары блоков (по 2 блока на поток)
         for (size_t iteration = 0; iteration < ((2 * ThreadsNum) - 1); iteration++) {
-#if ThreadsNum > 1
     #pragma omp parallel for shared(converged, U, V, SOB, up, dn) private(s, ThreadsNum)
-#endif
             for (size_t s = 0; s < ThreadsNum; s++) {
                 size_t ind = 0;
                 for (size_t i = SOB[up[s]].i; i <= SOB[up[s]].j; i++) {
@@ -291,9 +281,7 @@ size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, 
     if (sweeps > 30)
         return 0;
 
-#if ThreadsNum > 1
     #pragma omp parallel for shared(s, U) private(i, n) schedule(static)
-#endif
     for (size_t i = 0; i < n; i++) {
         double sigma = 0.0;
         //Вычисление сингулярных чисел

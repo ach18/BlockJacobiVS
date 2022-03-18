@@ -28,6 +28,7 @@ int main(int argc, char* argv[])
     std::vector<compute_params> rrbjrs_times(sizes.size() * max_threads);
     std::vector<compute_params> coloshjac_times(sizes.size() * max_threads);
 	std::vector<compute_params> mkl_dgesvj_times(sizes.size() * max_threads);
+	std::vector<compute_params> rrbnsvd_times(sizes.size() * max_threads);
 
     for (size_t i = 0; i < sizes.size(); i++) {
         m = sizes[i].i;
@@ -105,6 +106,29 @@ int main(int argc, char* argv[])
                 sprintf(errors, "[ERROR COMPUTATION] in 'coloshjac': matrix %d %d, %d threads", m, n, threads);
                 std::cout << errors << std::endl;
             }
+
+			//rrbnsvd - Блочный двусторонний Якоби со стратегией выбора элементов Round Robin
+			size_t rrbnsvd_block_size = 10;
+			try
+			{
+				size_t rrbnsvd_iters = rrbnsvd(Data_matr, B_mat, U_mat, V_mat, rrbnsvd_block_size, threads, &time);
+				if (rrbnsvd_iters <= 0) {
+					sprintf(errors, "[WARNING] Alg 'rrbnsvd' not computed: matrix %d %d, %d threads, %d block size", m, n, threads, rrbnsvd_block_size);
+					std::cout << errors << std::endl;
+				}
+				else
+				{
+					sprintf(info, "Compute alg 'rrbnsvd': matrix %d %d, %d threads, %d block size", m, n, threads, rrbnsvd_block_size);
+					std::cout << info << std::endl;
+					rrbnsvd_times.push_back({ Data_matr.rows, Data_matr.cols, threads, rrbnsvd_iters, time });
+				}
+
+			}
+			catch (const std::exception&)
+			{
+				sprintf(errors, "[ERROR COMPUTATION] in 'rrbnsvd': matrix %d %d, %d threads, %d block size", m, n, threads, rrbnsvd_block_size);
+				std::cout << errors << std::endl;
+			}
 
 			//dgesvj - MKL односторонний Якоби со стратегией выбора элементов перестановки столбцов (deRijk98)
 			//void DGESVJ(const char* joba, const char* jobu, const char* jobv,

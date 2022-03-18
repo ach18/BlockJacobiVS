@@ -140,7 +140,7 @@ size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, 
     std::vector<double> sin (m * n);
 
     //разметка матрицы на блоки (по столбцам)
-    bool result = column_limits(Amat, ThreadsNum, &SOB[0]);
+    bool result = rrbjrs_column_limits(Amat, ThreadsNum, &SOB[0]);
     if (!result)
         return 0;
 

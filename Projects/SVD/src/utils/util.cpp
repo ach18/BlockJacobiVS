@@ -174,7 +174,7 @@ void round_robin(size_t* up, size_t* dn, size_t ThreadsNum) {
     }
 }
 
-bool column_limits(struct matrix_t A, size_t ThreadsNum, struct index_t* SOB) {
+bool rrbjrs_column_limits(struct matrix_t A, size_t ThreadsNum, struct index_t* SOB) {
     size_t quotient = (A.cols / (2 * ThreadsNum)); //размер блоков при кратном деленим
     size_t remainder = A.cols % (2 * ThreadsNum); //число блоков размера (quotient + 1) при делении с остатком
     size_t multiple = (2 * ThreadsNum) - remainder; //число блоков размера quotient при кратном делении

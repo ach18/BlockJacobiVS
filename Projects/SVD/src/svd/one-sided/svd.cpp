@@ -42,7 +42,7 @@ size_t coloshjac(struct matrix_t Amat, struct vector_t svec, struct matrix_t Uma
     {
         converged = true;
         // Перебор над-диагональных элементов матрицы U
-    #pragma omp parallel for shared(converged, norm, U, V) private(i, n) schedule(static)
+    #pragma omp parallel for shared(converged, norm, U, V) firstprivate(n, m) schedule(static)
         for (size_t i = 0; i < n - 1; ++i) {
             for (size_t j = i + 1; j < n; ++j) {
                 double dot_ii = 0, dot_jj = 0, dot_ij = 0;
@@ -87,7 +87,7 @@ size_t coloshjac(struct matrix_t Amat, struct vector_t svec, struct matrix_t Uma
     if (sweeps > 30)
         return 0;
 
-    #pragma omp parallel for shared(s, U) private(i, n) schedule(static)
+    #pragma omp parallel for shared(s, U, n_singular_vals) firstprivate(m, n) schedule(static)
     for (size_t i = 0; i < n; ++i) {
         double sigma = 0.0;
         //Вычисление сингулярных чисел
@@ -171,11 +171,11 @@ size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, 
     {
         converged = true;
         //цикл ортогонализации блоков матрицы
-    #pragma omp parallel for shared(converged, U, V, SOB) private(s, ThreadsNum) schedule(static, 2)
-        for (size_t s = 0; s < (2 * ThreadsNum); s++) {
+    #pragma omp parallel for shared(converged, U, V, SOB) firstprivate(ThreadsNum) schedule(static, 2)
+        for (size_t rr_pair = 0; rr_pair < (2 * ThreadsNum); rr_pair++) {
             size_t ind = 0;
-            for (size_t i = SOB[s].i; i <= (SOB[s].j - 1); i++) {
-                for (size_t j = (i + 1); j <= (SOB[s].j); j++) {
+            for (size_t i = SOB[rr_pair].i; i <= (SOB[rr_pair].j - 1); i++) {
+                for (size_t j = (i + 1); j <= (SOB[rr_pair].j); j++) {
                     double dot_ii = 0, dot_jj = 0, dot_ij = 0;
                     //Вычисление суммм квадратов элементов стобцов, в которых расположены
                     //Uii, Uij, Ujj
@@ -197,8 +197,8 @@ size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, 
                 }
             }
             ind = 0;
-            for (size_t i = SOB[s].i; i <= (SOB[s].j - 1); i++) {
-                for (size_t j = (i + 1); j <= (SOB[s].j); j++) {
+            for (size_t i = SOB[rr_pair].i; i <= (SOB[rr_pair].j - 1); i++) {
+                for (size_t j = (i + 1); j <= (SOB[rr_pair].j); j++) {
                     //Обновление элементов матриц левых сингулярных векторов по столбцам
                     for (size_t k = 0; k < m; k++) {
                         double left = cos[ind] * U[n * k + i] - sin[ind] * U[n * k + j];
@@ -222,11 +222,11 @@ size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, 
         //на каждой итерации, с помощью стратегии распределения блоков между потоками (Round Robin)
         //каждый поток получает свои пары блоков (по 2 блока на поток)
         for (size_t iteration = 0; iteration < ((2 * ThreadsNum) - 1); iteration++) {
-    #pragma omp parallel for shared(converged, U, V, SOB, up, dn) private(s, ThreadsNum)
-            for (size_t s = 0; s < ThreadsNum; s++) {
+    #pragma omp parallel for shared(converged, U, V, SOB, up, dn) firstprivate(ThreadsNum)
+            for (size_t rr_pair = 0; rr_pair < ThreadsNum; rr_pair++) {
                 size_t ind = 0;
-                for (size_t i = SOB[up[s]].i; i <= SOB[up[s]].j; i++) {
-                    for (size_t j = SOB[dn[s]].i; j <= SOB[dn[s]].j; j++) {
+                for (size_t i = SOB[up[rr_pair]].i; i <= SOB[up[rr_pair]].j; i++) {
+                    for (size_t j = SOB[dn[rr_pair]].i; j <= SOB[dn[rr_pair]].j; j++) {
                         double dot_ii = 0, dot_jj = 0, dot_ij = 0;
                         //Вычисление суммм квадратов элементов стобцов, в которых расположены
                         //Uii, Uij, Ujj
@@ -249,8 +249,8 @@ size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, 
                 }
 
                 ind = 0;
-                for (size_t i = SOB[up[s]].i; i <= SOB[up[s]].j; i++) {
-                    for (size_t j = SOB[dn[s]].i; j <= SOB[dn[s]].j; j++) {
+                for (size_t i = SOB[up[rr_pair]].i; i <= SOB[up[rr_pair]].j; i++) {
+                    for (size_t j = SOB[dn[rr_pair]].i; j <= SOB[dn[rr_pair]].j; j++) {
                         //Обновление элементов матриц левых сингулярных векторов по столбцам
                         for (size_t k = 0; k < m; k++) {
                             double left = cos[ind] * U[n * k + i] - sin[ind] * U[n * k + j];
@@ -281,7 +281,7 @@ size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, 
     if (sweeps > 30)
         return 0;
 
-    #pragma omp parallel for shared(s, U) private(i, n) schedule(static)
+    #pragma omp parallel for shared(s, U, n) schedule(static)
     for (size_t i = 0; i < n; i++) {
         double sigma = 0.0;
         //Вычисление сингулярных чисел

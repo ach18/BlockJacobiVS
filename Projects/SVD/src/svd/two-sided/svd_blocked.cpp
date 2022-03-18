@@ -186,6 +186,8 @@ size_t rrbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat,
 		return block_iters;
 	}
 
+	//¬ходна€ матрица должна быть квадратной
+	assert(Amat.cols == Amat.rows);
 	//общее число элементов всех блоков строки/столбца должно быть равно размерности матрицы
 	assert(n_blocks * block_size == n);
 	//число блоков должно быть четным
@@ -225,8 +227,8 @@ size_t rrbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat,
 		//цикл обхода над/поддиагональных блоков
 		for (size_t iteration = 0; iteration < n_blocks - 1; ++iteration) {
 #pragma omp parallel for shared(Bmat, Umat, Vmat, block_size, up, dn, n_blocks) \
-	firstprivate(rr_pair, Bblockmat, Ublockmat, Vblockmat, block_iter, M1mat, M2mat) \
-	schedule(dynamic)
+	firstprivate(Bblockmat, Ublockmat, Vblockmat, block_iter, M1mat, M2mat) \
+	schedule(guided)
 			for (size_t rr_pair = 0; rr_pair < rr_pairs; ++rr_pair) {
 				size_t i_block = up[rr_pair];
 				size_t j_block = dn[rr_pair];

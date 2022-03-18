@@ -189,6 +189,7 @@ int main(int argc, char* argv[])
     // время
     compute_params_to_file(rrbjrs_times, "./TimeTests/rrbjrs_times.to");
     compute_params_to_file(coloshjac_times, "./TimeTests/coloshjac_times.to");
+	compute_params_to_file(rrbnsvd_times, "./TimeTests/rrbnsvd_times.to");
 	compute_params_to_file(mkl_dgesvj_times, "./TimeTests/mkl_dgesvj_times.to");
     return 0;
 }

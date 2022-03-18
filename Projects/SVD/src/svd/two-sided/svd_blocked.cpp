@@ -226,9 +226,10 @@ size_t rrbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat,
 	while (converged) {
 		//цикл обхода над/поддиагональных блоков
 		for (size_t iteration = 0; iteration < n_blocks - 1; ++iteration) {
-#pragma omp parallel for shared(Bmat, Umat, Vmat, block_size, up, dn, n_blocks) \
-	firstprivate(Bblockmat, Ublockmat, Vblockmat, block_iter, M1mat, M2mat) \
-	schedule(guided)
+#pragma omp parallel shared(Bmat, Umat, Vmat, block_size, up, dn, n_blocks) \
+	firstprivate(Bblockmat, Ublockmat, Vblockmat, block_iter, M1mat, M2mat)
+{
+	#pragma omp for schedule(guided)
 			for (size_t rr_pair = 0; rr_pair < rr_pairs; ++rr_pair) {
 				size_t i_block = up[rr_pair];
 				size_t j_block = dn[rr_pair];
@@ -256,7 +257,11 @@ size_t rrbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat,
 					matrix_add(M1mat, M2mat, M2mat);
 					copy_block(M2mat, 0, 0, Bmat, j_block, k_block, block_size);
 				}
-#pragma omp barrier
+			}
+	#pragma omp for schedule(guided)
+			for (size_t rr_pair = 0; rr_pair < rr_pairs; ++rr_pair) {
+				size_t i_block = up[rr_pair];
+				size_t j_block = dn[rr_pair];
 				//обновление блоков матрицы B по столбцам i j с помощью V
 				for (size_t k_block = 0; k_block < n_blocks; ++k_block) {
 					mult_block(Bmat, k_block, i_block, Vblockmat, 0, 0, M1mat, 0, 0, block_size);
@@ -283,7 +288,7 @@ size_t rrbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat,
 					matrix_add(M1mat, M2mat, M2mat);
 					copy_block(M2mat, 0, 0, Umat, k_block, j_block, block_size);
 				}
-#pragma omp barrier
+
 				//обновление блоков матрицы V по столбцам i j
 				for (size_t k_block = 0; k_block < n_blocks; ++k_block) {
 					mult_block(Vmat, k_block, i_block, Vblockmat, 0, 0, M1mat, 0, 0, block_size);
@@ -296,6 +301,7 @@ size_t rrbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat,
 					copy_block(M2mat, 0, 0, Vmat, k_block, j_block, block_size);
 				}
 			}
+}
 			round_robin(&up[0], &dn[0], rr_pairs);
 		}
 

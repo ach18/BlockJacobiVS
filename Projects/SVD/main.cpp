@@ -1,5 +1,5 @@
 ﻿#include <algorithm>
-#include <stdio.h>
+#include <cstdio>
 #include <cassert>
 #include <iostream>
 #include <vector>

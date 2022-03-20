@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <omp.h>
 #include <math.h>
-#include <stdlib.h>
+#include <cstdlib>
 #include <algorithm>
 #include "../../utils/block.hpp"
 #include "../../utils/matrix.hpp"

@@ -1,5 +1,5 @@
 #include "util.hpp"
-#include <assert.h>
+#include <cassert>
 #include <math.h>
 #include <limits>
 #include "types.hpp"

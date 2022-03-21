@@ -1,5 +1,5 @@
 #include "svd.hpp"
-#include <assert.h>
+#include <cassert>
 #include <math.h>
 #include <omp.h>
 #include "../../utils/types.hpp"

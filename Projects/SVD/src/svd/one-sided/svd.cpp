@@ -7,11 +7,12 @@
 #include "../../utils/matrix.hpp"
 
 /**
- * @param matrix_t Amat симметрична€ квадратна€ (или пр€моугольна€) матрица A
+* ќдносторонний метод якоби (Hestenes Jacobi),
+  элементы выбираютс€ последовательно по столбцу матрицы
+ * @param matrix_t Amat пр€моугольна€ матрица A
  * @param vector_t svec вектор сингул€рных чисел
  * @param matrix_t Umat матрица левых сингул€рных векторов
  * @param matrix_t Vmat матрица правых сингул€рных векторов
- * @param size_t n_iter число необходимых дл€ сходимости разверток
  * @return size_t sweeps число разверток методом якоби
  **/
 size_t coloshjac(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, struct matrix_t Vmat, size_t ThreadsNum, double* Time) {
@@ -115,11 +116,12 @@ size_t coloshjac(struct matrix_t Amat, struct vector_t svec, struct matrix_t Uma
 }
 
 /**
- * @param matrix_t Amat симметрична€ квадратна€ (или пр€моугольна€) матрица A
+ * Ѕлочный односторонний метод якоби (Block Jacobi Relaxasion),
+ * Ѕлоки выбираютс€ в соответствии со стратегией шахматного турнира (Round Robin)
+ * @param matrix_t Amat пр€моугольна€ матрица A
  * @param vector_t svec вектор сингул€рных чисел
  * @param matrix_t Umat матрица левых сингул€рных векторов
  * @param matrix_t Vmat матрица правых сингул€рных векторов
- * @param size_t n_iter число необходимых дл€ сходимости разверток
  * @return size_t sweeps число разверток методом якоби
  **/
 size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, struct matrix_t Vmat, size_t ThreadsNum, double* Time) {

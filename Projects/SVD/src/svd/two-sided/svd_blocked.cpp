@@ -78,12 +78,16 @@ size_t colbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat
                 copy_block(Bmat, j_block, j_block, Bblockmat, 1, 1, block_size);
 
                 //вычисление SVD разложения циклическим методом Якоби над блоком Bblockmat
+				//Bblockmat используется только в этой процедуре для упрощения обращения к индексам внутри
                 block_iter += svd_subprocedure(Bblockmat, Ublockmat, Vblockmat);
 
                 //транспонировать блок матрицы U 
                 matrix_transpose(Ublockmat, Ublockmat);
 
-                //обновление блоков матрицы B по строкам i j с помощью U
+				//выполнение операции U^T*B*V, т.е. обновление строк и столбцов в двух циклах
+				//элементами U, V выступают матрицы текущей подпроблемы, B - исходная матрица 
+				//при этом матрица B считается диагональной
+                //обновление блоков исходной матрицы B по строкам i j с помощью U
                 for (size_t k_block = 0; k_block < n_blocks; ++k_block) {
                     mult_block(Ublockmat, 0, 0, Bmat, i_block, k_block, M1mat, 0, 0, block_size);
                     mult_block(Ublockmat, 0, 1, Bmat, j_block, k_block, M2mat, 0, 0, block_size);
@@ -95,7 +99,7 @@ size_t colbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat
                     copy_block(M2mat, 0, 0, Bmat, j_block, k_block, block_size);
                 }
 
-                //обновление блоков матрицы B по столбцам i j с помощью V
+                //обновление блоков исходной матрицы B по столбцам i j с помощью V
                 for (size_t k_block = 0; k_block < n_blocks; ++k_block) {
                     mult_block(Bmat, k_block, i_block, Vblockmat, 0, 0, M1mat, 0, 0, block_size);
                     mult_block(Bmat, k_block, j_block, Vblockmat, 1, 0, M2mat, 0, 0, block_size);
@@ -107,10 +111,10 @@ size_t colbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat
                     copy_block(M2mat, 0, 0, Bmat, k_block, j_block, block_size);
                 }
 
-                //возвращение блока матрицы U^T в исходное состояние U 
+                //возвращение транспонированного блока U^T в исходное состояние U 
                 matrix_transpose(Ublockmat, Ublockmat);
 
-                //обновление блоков матрицы U по столбцам i j
+                //обновление блоков исходной матрицы U по столбцам i j путем умножения на матрицу подпроблемы Ublockmat
                 for (size_t k_block = 0; k_block < n_blocks; ++k_block) {
                     mult_block(Umat, k_block, i_block, Ublockmat, 0, 0, M1mat, 0, 0, block_size);
                     mult_block(Umat, k_block, j_block, Ublockmat, 1, 0, M2mat, 0, 0, block_size);
@@ -122,7 +126,7 @@ size_t colbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat
                     copy_block(M2mat, 0, 0, Umat, k_block, j_block, block_size);
                 }
 
-                //обновление блоков матрицы V по столбцам i j
+                //обновление блоков исходной матрицы V по столбцам i j путем умножения на матрицу подпроблемы Vblockmat
                 for (size_t k_block = 0; k_block < n_blocks; ++k_block) {
                     mult_block(Vmat, k_block, i_block, Vblockmat, 0, 0, M1mat, 0, 0, block_size);
                     mult_block(Vmat, k_block, j_block, Vblockmat, 1, 0, M2mat, 0, 0, block_size);
@@ -241,12 +245,16 @@ size_t rrbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat,
 				copy_block(Bmat, j_block, j_block, Bblockmat, 1, 1, block_size);
 
 				//вычисление SVD разложения циклическим методом Якоби над блоком Bblockmat
+				//Bblockmat используется только в этой процедуре для упрощения обращения к индексам внутри
 				block_iter += svd_subprocedure(Bblockmat, Ublockmat, Vblockmat);
 
 				//транспонировать блок матрицы U 
 				matrix_transpose(Ublockmat, Ublockmat);
 
-				//обновление блоков матрицы B по строкам i j с помощью U
+				//выполнение операции U^T*B*V, т.е. обновление строк и столбцов в двух циклах
+				//элементами U, V выступают матрицы текущей подпроблемы, B - исходная матрица 
+				//при этом матрица B считается диагональной
+				//обновление блоков исходной матрицы B по строкам i j с помощью U
 				for (size_t k_block = 0; k_block < n_blocks; ++k_block) {
 					mult_block(Ublockmat, 0, 0, Bmat, i_block, k_block, M1mat, 0, 0, block_size);
 					mult_block(Ublockmat, 0, 1, Bmat, j_block, k_block, M2mat, 0, 0, block_size);
@@ -262,7 +270,7 @@ size_t rrbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat,
 			for (size_t rr_pair = 0; rr_pair < rr_pairs; ++rr_pair) {
 				size_t i_block = up[rr_pair];
 				size_t j_block = dn[rr_pair];
-				//обновление блоков матрицы B по столбцам i j с помощью V
+				//обновление блоков исходной матрицы B по столбцам i j с помощью V
 				for (size_t k_block = 0; k_block < n_blocks; ++k_block) {
 					mult_block(Bmat, k_block, i_block, Vblockmat, 0, 0, M1mat, 0, 0, block_size);
 					mult_block(Bmat, k_block, j_block, Vblockmat, 1, 0, M2mat, 0, 0, block_size);
@@ -274,10 +282,10 @@ size_t rrbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat,
 					copy_block(M2mat, 0, 0, Bmat, k_block, j_block, block_size);
 				}
 
-				//возвращение блока матрицы U^T в исходное состояние U 
+				//возвращение транспонированного блока U^T в исходное состояние U 
 				matrix_transpose(Ublockmat, Ublockmat);
 
-				//обновление блоков матрицы U по столбцам i j
+				//обновление блоков исходной матрицы U по столбцам i j путем умножения на матрицу подпроблемы Ublockmat
 				for (size_t k_block = 0; k_block < n_blocks; ++k_block) {
 					mult_block(Umat, k_block, i_block, Ublockmat, 0, 0, M1mat, 0, 0, block_size);
 					mult_block(Umat, k_block, j_block, Ublockmat, 1, 0, M2mat, 0, 0, block_size);
@@ -289,7 +297,7 @@ size_t rrbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat,
 					copy_block(M2mat, 0, 0, Umat, k_block, j_block, block_size);
 				}
 
-				//обновление блоков матрицы V по столбцам i j
+				//обновление блоков исходной матрицы V по столбцам i j путем умножения на матрицу подпроблемы Vblockmat
 				for (size_t k_block = 0; k_block < n_blocks; ++k_block) {
 					mult_block(Vmat, k_block, i_block, Vblockmat, 0, 0, M1mat, 0, 0, block_size);
 					mult_block(Vmat, k_block, j_block, Vblockmat, 1, 0, M2mat, 0, 0, block_size);

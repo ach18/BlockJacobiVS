@@ -2,6 +2,8 @@
 #include <cassert>
 #include <math.h>
 #include <omp.h>
+#include <cstdio>
+#include "../../utils/types.hpp"
 #include "../../utils/util.hpp"
 #include "../../utils/matrix.hpp"
 
@@ -141,8 +143,6 @@ std::size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t U
     std::vector<std::size_t> up(ThreadsNum); //массив хранит номер первого блока для одного потока
     std::vector<std::size_t> dn(ThreadsNum); //массив хранит номер второго блока для одного потока
     std::vector<index_t> SOB(2 * ThreadsNum); //массив хранит пары индексов начала и конца двух блоков (i - индекс начала блока, j - конец) для одного потока
-    std::vector<double> cos(m * n);
-    std::vector<double> sin (m * n);
 
     //разметка матрицы на блоки (по столбцам)
     bool result = rrbjrs_column_limits(Amat, ThreadsNum, &SOB[0]);
@@ -179,9 +179,11 @@ std::size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t U
     {
         converged = true;
         //цикл ортогонализации блоков матрицы
-    #pragma omp parallel for shared(converged, U, V, SOB) firstprivate(ThreadsNum) schedule(static,2) if(ThreadsNum > 1)
+    #pragma omp parallel for shared(converged, U, V, SOB, m, n, norm) firstprivate(ThreadsNum) schedule(static,2) if(ThreadsNum > 1)
         for (std::size_t rr_pair = 0; rr_pair < (2 * ThreadsNum); rr_pair++) {
             std::size_t ind = 0;
+			std::vector<double> cos(m * n);
+			std::vector<double> sin(m * n);
             for (std::size_t i = SOB[rr_pair].i; i <= (SOB[rr_pair].j - 1); i++) {
                 for (std::size_t j = (i + 1); j <= (SOB[rr_pair].j); j++) {
                     double dot_ii = 0, dot_jj = 0, dot_ij = 0;
@@ -230,9 +232,11 @@ std::size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t U
         //на каждой итерации, с помощью стратегии распределения блоков между потоками (Round Robin)
         //каждый поток получает свои пары блоков (по 2 блока на поток)
         for (std::size_t iteration = 0; iteration < ((2 * ThreadsNum) - 1); iteration++) {
-    #pragma omp parallel for shared(converged, U, V, SOB, up, dn) firstprivate(ThreadsNum) schedule(static,1) if(ThreadsNum > 1)
+    #pragma omp parallel for shared(converged, U, V, SOB, up, dn, m, n, norm) firstprivate(ThreadsNum) schedule(static,1) if(ThreadsNum > 1)
             for (std::size_t rr_pair = 0; rr_pair < ThreadsNum; rr_pair++) {
                 std::size_t ind = 0;
+				std::vector<double> cos(m * n);
+				std::vector<double> sin(m * n);
                 for (std::size_t i = SOB[up[rr_pair]].i; i <= SOB[up[rr_pair]].j; i++) {
                     for (std::size_t j = SOB[dn[rr_pair]].i; j <= SOB[dn[rr_pair]].j; j++) {
                         double dot_ii = 0, dot_jj = 0, dot_ij = 0;

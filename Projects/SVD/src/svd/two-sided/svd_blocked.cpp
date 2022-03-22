@@ -1,6 +1,7 @@
 #include <omp.h>
 #include <math.h>
 #include <cstdlib>
+#include <cstdio>
 #include <algorithm>
 #include "../../utils/block.hpp"
 #include "../../utils/matrix.hpp"
@@ -169,10 +170,10 @@ std::size_t rrbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t 
 	std::size_t ThreadsNum, double* Time, struct string_t errors) {
 
 	std::size_t subproblem_blocks = 4; //число блоков, которое формирует подзадачу
-	std::size_t max_sweeps = 50; //максимальное число повторения итераций
+	std::size_t max_sweeps = 40; //максимальное число повторения итераций
 	std::size_t sweeps = 0;  //число повторений цикла развертки
 	std::size_t block_iter = 0;
-	const double tol = 1e-15;  //точность предела сходимости
+	const double tol = 1e-10;  //точность предела сходимости
 	std::size_t n = Amat.rows; //размер матрицы
 	double norm = 0.0;      //норма Фробениуса матрицы B
 	double off_norm = 0.0;  //норма Фробениуса только недиагональных элементов матрицы B
@@ -221,6 +222,10 @@ std::size_t rrbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t 
 
 	if(ThreadsNum > 1)
 		omp_set_num_threads(ThreadsNum);
+	else {
+		*errors.len = sprintf(errors.ptr, "minimum 2 threads needed");
+		return 0;
+	}
 	t1 = omp_get_wtime();
 	bool converged = sqrt(off_norm) > tol * sqrt(norm);
 
@@ -228,7 +233,9 @@ std::size_t rrbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t 
 	while (converged) {
 		//цикл обхода над/поддиагональных блоков
 		for (std::size_t iteration = 0; iteration < n_blocks - 1; ++iteration) {
-#pragma omp parallel shared(Bmat, Umat, Vmat, block_size, up, dn, n_blocks)
+//Выполнение параллельных итераций цикла заменяется на выполнение в параллельном регионе. Один поток фактически параллельно
+//выполняет одну итерацию цикла
+#pragma omp parallel shared(Bmat, Umat, Vmat, block_size, up, dn, n_blocks, subproblem_blocks) if(ThreadsNum > 1)
 {
 			//выделение памяти для хранения блоков матриц B U V M1 M2
 			std::vector<double> Bblock(subproblem_blocks * block_size * block_size);
@@ -245,81 +252,75 @@ std::size_t rrbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t 
 			matrix_t M1mat = { &M1[0], block_size, block_size };
 			matrix_t M2mat = { &M2[0], block_size, block_size };
 
-	#pragma omp for schedule(static, 1)
-			for (std::size_t rr_pair = 0; rr_pair < rr_pairs; ++rr_pair) {
-				std::size_t i_block = up[rr_pair];
-				std::size_t j_block = dn[rr_pair];
+			int rr_pair = omp_get_thread_num();
+			std::size_t i_block = up[rr_pair];
+			std::size_t j_block = dn[rr_pair];
+			if (i_block > j_block)
+				std::swap(i_block, j_block);
 
-				//в Bblockmat копируются блоки с индексами ii ij ji jj из матрицы Bmat
-				copy_block(Bmat, i_block, i_block, Bblockmat, 0, 0, block_size);
-				copy_block(Bmat, i_block, j_block, Bblockmat, 0, 1, block_size);
-				copy_block(Bmat, j_block, i_block, Bblockmat, 1, 0, block_size);
-				copy_block(Bmat, j_block, j_block, Bblockmat, 1, 1, block_size);
+			//в Bblockmat копируются блоки с индексами ii ij ji jj из матрицы Bmat
+			copy_block(Bmat, i_block, i_block, Bblockmat, 0, 0, block_size);
+			copy_block(Bmat, i_block, j_block, Bblockmat, 0, 1, block_size);
+			copy_block(Bmat, j_block, i_block, Bblockmat, 1, 0, block_size);
+			copy_block(Bmat, j_block, j_block, Bblockmat, 1, 1, block_size);
 
-				//вычисление SVD разложения циклическим методом Якоби над блоком Bblockmat
-				//Bblockmat используется только в этой процедуре для упрощения обращения к индексам внутри
-				block_iter += svd_subprocedure(Bblockmat, Ublockmat, Vblockmat);
+			//вычисление SVD разложения циклическим методом Якоби над блоком Bblockmat
+			//Bblockmat используется только в этой процедуре для упрощения обращения к индексам внутри
+			block_iter += svd_subprocedure(Bblockmat, Ublockmat, Vblockmat);
 
-				//транспонировать блок матрицы U 
-				matrix_transpose(Ublockmat, Ublockmat);
+			//транспонировать блок матрицы U 
+			matrix_transpose(Ublockmat, Ublockmat);
 
-				//выполнение операции U^T*B*V, т.е. обновление строк и столбцов в двух циклах
-				//элементами U, V выступают матрицы текущей подпроблемы, B - исходная матрица 
-				//при этом матрица B считается диагональной
-				//обновление блоков исходной матрицы B по строкам i j с помощью U
-				for (std::size_t k_block = 0; k_block < n_blocks; ++k_block) {
-					mult_block(Ublockmat, 0, 0, Bmat, i_block, k_block, M1mat, 0, 0, block_size);
-					mult_block(Ublockmat, 0, 1, Bmat, j_block, k_block, M2mat, 0, 0, block_size);
-					matrix_add(M1mat, M2mat, M2mat);
-					mult_block(Ublockmat, 1, 0, Bmat, i_block, k_block, M1mat, 0, 0, block_size);
-					copy_block(M2mat, 0, 0, Bmat, i_block, k_block, block_size);
-					mult_block(Ublockmat, 1, 1, Bmat, j_block, k_block, M2mat, 0, 0, block_size);
-					matrix_add(M1mat, M2mat, M2mat);
-					copy_block(M2mat, 0, 0, Bmat, j_block, k_block, block_size);
-				}
+			//выполнение операции U^T*B*V, т.е. обновление строк и столбцов в двух циклах
+			//элементами U, V выступают матрицы текущей подпроблемы, B - исходная матрица 
+			//при этом матрица B считается диагональной
+			//обновление блоков исходной матрицы B по строкам i j с помощью U
+			for (std::size_t k_block = 0; k_block < n_blocks; ++k_block) {
+				mult_block(Ublockmat, 0, 0, Bmat, i_block, k_block, M1mat, 0, 0, block_size);
+				mult_block(Ublockmat, 0, 1, Bmat, j_block, k_block, M2mat, 0, 0, block_size);
+				matrix_add(M1mat, M2mat, M2mat);
+				mult_block(Ublockmat, 1, 0, Bmat, i_block, k_block, M1mat, 0, 0, block_size);
+				copy_block(M2mat, 0, 0, Bmat, i_block, k_block, block_size);
+				mult_block(Ublockmat, 1, 1, Bmat, j_block, k_block, M2mat, 0, 0, block_size);
+				matrix_add(M1mat, M2mat, M2mat);
+				copy_block(M2mat, 0, 0, Bmat, j_block, k_block, block_size);
 			}
-	#pragma omp for schedule(static, 1)
-			for (std::size_t rr_pair = 0; rr_pair < rr_pairs; ++rr_pair) {
-				std::size_t i_block = up[rr_pair];
-				std::size_t j_block = dn[rr_pair];
-				//обновление блоков исходной матрицы B по столбцам i j с помощью V
-				for (std::size_t k_block = 0; k_block < n_blocks; ++k_block) {
-					mult_block(Bmat, k_block, i_block, Vblockmat, 0, 0, M1mat, 0, 0, block_size);
-					mult_block(Bmat, k_block, j_block, Vblockmat, 1, 0, M2mat, 0, 0, block_size);
-					matrix_add(M1mat, M2mat, M2mat);
-					mult_block(Bmat, k_block, i_block, Vblockmat, 0, 1, M1mat, 0, 0, block_size);
-					copy_block(M2mat, 0, 0, Bmat, k_block, i_block, block_size);
-					mult_block(Bmat, k_block, j_block, Vblockmat, 1, 1, M2mat, 0, 0, block_size);
-					matrix_add(M1mat, M2mat, M2mat);
-					copy_block(M2mat, 0, 0, Bmat, k_block, j_block, block_size);
-				}
+	#pragma omp barrier
+			//обновление блоков исходной матрицы B по столбцам i j с помощью V
+			for (std::size_t k_block = 0; k_block < n_blocks; ++k_block) {
+				mult_block(Bmat, k_block, i_block, Vblockmat, 0, 0, M1mat, 0, 0, block_size);
+				mult_block(Bmat, k_block, j_block, Vblockmat, 1, 0, M2mat, 0, 0, block_size);
+				matrix_add(M1mat, M2mat, M2mat);
+				mult_block(Bmat, k_block, i_block, Vblockmat, 0, 1, M1mat, 0, 0, block_size);
+				copy_block(M2mat, 0, 0, Bmat, k_block, i_block, block_size);
+				mult_block(Bmat, k_block, j_block, Vblockmat, 1, 1, M2mat, 0, 0, block_size);
+				matrix_add(M1mat, M2mat, M2mat);
+				copy_block(M2mat, 0, 0, Bmat, k_block, j_block, block_size);
+			}
 
-				//возвращение транспонированного блока U^T в исходное состояние U 
-				matrix_transpose(Ublockmat, Ublockmat);
-
-				//обновление блоков исходной матрицы U по столбцам i j путем умножения на матрицу подпроблемы Ublockmat
-				for (std::size_t k_block = 0; k_block < n_blocks; ++k_block) {
-					mult_block(Umat, k_block, i_block, Ublockmat, 0, 0, M1mat, 0, 0, block_size);
-					mult_block(Umat, k_block, j_block, Ublockmat, 1, 0, M2mat, 0, 0, block_size);
-					matrix_add(M1mat, M2mat, M2mat);
-					mult_block(Umat, k_block, i_block, Ublockmat, 0, 1, M1mat, 0, 0, block_size);
-					copy_block(M2mat, 0, 0, Umat, k_block, i_block, block_size);
-					mult_block(Umat, k_block, j_block, Ublockmat, 1, 1, M2mat, 0, 0, block_size);
-					matrix_add(M1mat, M2mat, M2mat);
-					copy_block(M2mat, 0, 0, Umat, k_block, j_block, block_size);
-				}
-
-				//обновление блоков исходной матрицы V по столбцам i j путем умножения на матрицу подпроблемы Vblockmat
-				for (std::size_t k_block = 0; k_block < n_blocks; ++k_block) {
-					mult_block(Vmat, k_block, i_block, Vblockmat, 0, 0, M1mat, 0, 0, block_size);
-					mult_block(Vmat, k_block, j_block, Vblockmat, 1, 0, M2mat, 0, 0, block_size);
-					matrix_add(M1mat, M2mat, M2mat);
-					mult_block(Vmat, k_block, i_block, Vblockmat, 0, 1, M1mat, 0, 0, block_size);
-					copy_block(M2mat, 0, 0, Vmat, k_block, i_block, block_size);
-					mult_block(Vmat, k_block, j_block, Vblockmat, 1, 1, M2mat, 0, 0, block_size);
-					matrix_add(M1mat, M2mat, M2mat);
-					copy_block(M2mat, 0, 0, Vmat, k_block, j_block, block_size);
-				}
+			//возвращение транспонированного блока U^T в исходное состояние U 
+			matrix_transpose(Ublockmat, Ublockmat);
+			//обновление блоков исходной матрицы U по столбцам i j путем умножения на матрицу подпроблемы Ublockmat
+			for (std::size_t k_block = 0; k_block < n_blocks; ++k_block) {
+				mult_block(Umat, k_block, i_block, Ublockmat, 0, 0, M1mat, 0, 0, block_size);
+				mult_block(Umat, k_block, j_block, Ublockmat, 1, 0, M2mat, 0, 0, block_size);
+				matrix_add(M1mat, M2mat, M2mat);
+				mult_block(Umat, k_block, i_block, Ublockmat, 0, 1, M1mat, 0, 0, block_size);
+				copy_block(M2mat, 0, 0, Umat, k_block, i_block, block_size);
+				mult_block(Umat, k_block, j_block, Ublockmat, 1, 1, M2mat, 0, 0, block_size);
+				matrix_add(M1mat, M2mat, M2mat);
+				copy_block(M2mat, 0, 0, Umat, k_block, j_block, block_size);
+			}
+			//обновление блоков исходной матрицы V по столбцам i j путем умножения на матрицу подпроблемы Vblockmat
+			for (std::size_t k_block = 0; k_block < n_blocks; ++k_block) {
+				mult_block(Vmat, k_block, i_block, Vblockmat, 0, 0, M1mat, 0, 0, block_size);
+				mult_block(Vmat, k_block, j_block, Vblockmat, 1, 0, M2mat, 0, 0, block_size);
+				matrix_add(M1mat, M2mat, M2mat);
+				mult_block(Vmat, k_block, i_block, Vblockmat, 0, 1, M1mat, 0, 0, block_size);
+				copy_block(M2mat, 0, 0, Vmat, k_block, i_block, block_size);
+				mult_block(Vmat, k_block, j_block, Vblockmat, 1, 1, M2mat, 0, 0, block_size);
+				matrix_add(M1mat, M2mat, M2mat);
+				copy_block(M2mat, 0, 0, Vmat, k_block, j_block, block_size);
 			}
 }
 			round_robin(&up[0], &dn[0], rr_pairs);

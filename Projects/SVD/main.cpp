@@ -2,10 +2,9 @@
 #include <cstdio>
 #include <cassert>
 #include <iostream>
-//#include <vector>
 #include <omp.h>
 #ifdef MKL_TEST
-#include <mkl.h>
+	#include <mkl.h>
 #endif //
 #include "src/utils/types.hpp"
 #include "src/utils/util.hpp"
@@ -15,11 +14,11 @@
 
 int main(int argc, char* argv[])
 {
-    std::vector<index_t> sizes = { {100, 100},  {200, 100}, {200, 200}, {300, 100}, {300, 200}, {300, 300}, {500, 100}, {500, 200}, {500, 300}, {500, 500} };
-    std::size_t n; //Размер столбцов матрицы A(mxn)
+	std::vector<index_t> sizes = { {100, 100}, {200, 100}, {200, 200}, {300, 100}, {300, 200}, {300, 300}, {500, 100}, {500, 200}, {500, 300}, {500, 500} };
+	std::size_t n; //Размер столбцов матрицы A(mxn)
     std::size_t m; //Размер строк матрицы A(mxn)
-    std::size_t block_size; //Размер блока матрицы (минимум 8)
-    std::size_t max_threads = 20;
+    std::size_t block_size; //Размер блока матрицы (минимум 10)
+	std::size_t max_threads = omp_get_max_threads();
 
     double time = 0.0;
     char in_path[100];
@@ -35,7 +34,6 @@ int main(int argc, char* argv[])
     for (std::size_t i = 0; i < sizes.size(); i++) {
         m = sizes[i].i;
         n = sizes[i].j;
-
         //Объявление структур и типов данных
         std::vector<double> A(m * n);
         std::vector<double> B(m * n);

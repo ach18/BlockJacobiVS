@@ -85,33 +85,13 @@ int main(int argc, char* argv[])
                 std::cout << errors << std::endl;
             }
 
-            //coloshjac - Односторонний метод Якоби, элементы выбираются по столбцам последовательно
-            try
-            {
-                size_t coloshjac_iters = coloshjac(Data_matr, S_vect, U_mat, V_mat, threads, &time);
-                if (coloshjac_iters <= 0) {
-                    sprintf(errors, "[WARNING] Alg 'coloshjac' not computed: matrix %d %d, %d threads", m, n, threads);
-                    std::cout << errors << std::endl;
-                }
-                else
-                {
-                    sprintf(info, "Compute alg 'coloshjac': matrix %d %d, %d threads", m, n, threads);
-                    std::cout << info << std::endl;
-                    coloshjac_times.push_back({ Data_matr.rows, Data_matr.cols, threads, coloshjac_iters, time });
-                }
-
-            }
-            catch (const std::exception&)
-            {
-                sprintf(errors, "[ERROR COMPUTATION] in 'coloshjac': matrix %d %d, %d threads", m, n, threads);
-                std::cout << errors << std::endl;
-            }
-
 			//rrbnsvd - Блочный двусторонний Якоби со стратегией выбора элементов Round Robin
 			size_t rrbnsvd_block_size = 10;
 			try
 			{
-				size_t rrbnsvd_iters = rrbnsvd(Data_matr, B_mat, U_mat, V_mat, rrbnsvd_block_size, threads, &time);
+				size_t rrbnsvd_iters = 0;
+				if(Data_matr.cols == Data_matr.rows)
+					rrbnsvd_iters = rrbnsvd(Data_matr, B_mat, U_mat, V_mat, rrbnsvd_block_size, threads, &time);
 				if (rrbnsvd_iters <= 0) {
 					sprintf(errors, "[WARNING] Alg 'rrbnsvd' not computed: matrix %d %d, %d threads, %d block size", m, n, threads, rrbnsvd_block_size);
 					std::cout << errors << std::endl;

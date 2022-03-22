@@ -191,12 +191,20 @@ size_t rrbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat,
 	}
 
 	//Входная матрица должна быть квадратной
-	assert(Amat.cols == Amat.rows);
+	if(Amat.cols != Amat.rows)
+		return -1;
 	//общее число элементов всех блоков строки/столбца должно быть равно размерности матрицы
-	assert(n_blocks * block_size == n);
+	if(n_blocks * block_size != n)
+		return -2;
 	//число блоков должно быть четным
-	assert((n_blocks % 2) == 0);
+	if ((n_blocks % 2) != 0)
+		return -3;
 	size_t rr_pairs = n_blocks / 2; //число пар индексов
+
+	//По умолчанию один блок на поток
+	if (rr_pairs != ThreadsNum)
+		return -4;
+
 	std::vector<size_t> up(rr_pairs); //массив хранит индекс i блока для одного потока
 	std::vector<size_t> dn(rr_pairs); //массив хранит индекс j блока для одного потока
 
@@ -222,7 +230,8 @@ size_t rrbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat,
 	matrix_t M1mat = { &M1[0], block_size, block_size };
 	matrix_t M2mat = { &M2[0], block_size, block_size };
 
-	omp_set_num_threads(ThreadsNum);
+	if(ThreadsNum > 1)
+		omp_set_num_threads(ThreadsNum);
 	t1 = omp_get_wtime();
 	bool converged = sqrt(off_norm) > tol * sqrt(norm);
 
@@ -233,7 +242,7 @@ size_t rrbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat,
 #pragma omp parallel shared(Bmat, Umat, Vmat, block_size, up, dn, n_blocks) \
 	firstprivate(Bblockmat, Ublockmat, Vblockmat, block_iter, M1mat, M2mat)
 {
-	#pragma omp for schedule(guided)
+	#pragma omp for schedule(static, 1)
 			for (size_t rr_pair = 0; rr_pair < rr_pairs; ++rr_pair) {
 				size_t i_block = up[rr_pair];
 				size_t j_block = dn[rr_pair];
@@ -266,7 +275,7 @@ size_t rrbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat,
 					copy_block(M2mat, 0, 0, Bmat, j_block, k_block, block_size);
 				}
 			}
-	#pragma omp for schedule(guided)
+	#pragma omp for schedule(static, 1)
 			for (size_t rr_pair = 0; rr_pair < rr_pairs; ++rr_pair) {
 				size_t i_block = up[rr_pair];
 				size_t j_block = dn[rr_pair];

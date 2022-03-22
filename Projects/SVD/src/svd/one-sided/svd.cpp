@@ -2,7 +2,6 @@
 #include <cassert>
 #include <math.h>
 #include <omp.h>
-#include "../../utils/types.hpp"
 #include "../../utils/util.hpp"
 #include "../../utils/matrix.hpp"
 
@@ -13,15 +12,16 @@
  * @param vector_t svec вектор сингулярных чисел
  * @param matrix_t Umat матрица левых сингулярных векторов
  * @param matrix_t Vmat матрица правых сингулярных векторов
- * @return size_t sweeps число разверток методом Якоби
+ * @return std::size_t sweeps число разверток методом Якоби
  **/
-size_t coloshjac(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, struct matrix_t Vmat, size_t ThreadsNum, double* Time) {
-    const size_t m = Amat.rows; //строки матрицы A
-    const size_t n = Amat.cols; //столбцы матрицы A
-    const size_t n_singular_vals = svec.len; //Длина вектора сингулярных значений
+std::size_t coloshjac(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, struct matrix_t Vmat, std::size_t ThreadsNum, double* Time, struct string_t errors) {
+    const std::size_t m = Amat.rows; //строки матрицы A
+    const std::size_t n = Amat.cols; //столбцы матрицы A
+    const std::size_t n_singular_vals = svec.len; //Длина вектора сингулярных значений
     const double tol = 10e-15;  //точность предела сходимости
+	std::size_t max_sweeps = 40;
     double t1, t2;              //замер времени
-    size_t sweeps = 0;  //число повторений цикла развертки
+    std::size_t sweeps = 0;  //число повторений цикла развертки
     double norm = 0.0;      //норма Фробениуса матрицы A
     double off_norm = 0.0;  //норма Фробениуса только недиагональных элементов матрицы A
     bool converged = true; //Признак сходимости цикла
@@ -45,12 +45,12 @@ size_t coloshjac(struct matrix_t Amat, struct vector_t svec, struct matrix_t Uma
         converged = true;
         // Перебор над-диагональных элементов матрицы U
     #pragma omp parallel for shared(converged, norm, U, V) firstprivate(n, m) schedule(dynamic) if(ThreadsNum > 1)
-        for (size_t i = 0; i < n - 1; ++i) {
-            for (size_t j = i + 1; j < n; ++j) {
+        for (std::size_t i = 0; i < n - 1; ++i) {
+            for (std::size_t j = i + 1; j < n; ++j) {
                 double dot_ii = 0, dot_jj = 0, dot_ij = 0;
                 //Вычисление суммм квадратов элементов столбцов, в которых расположены
                 //Uii, Uij, Ujj
-                for (size_t k = 0; k < m; ++k) {
+                for (std::size_t k = 0; k < m; ++k) {
                     dot_ii += U[n * k + i] * U[n * k + i];
                     dot_ij += U[n * k + i] * U[n * k + j];
                     dot_jj += U[n * k + j] * U[n * k + j];
@@ -64,14 +64,14 @@ size_t coloshjac(struct matrix_t Amat, struct vector_t svec, struct matrix_t Uma
                 sym_jacobi_coeffs(dot_ii, dot_ij, dot_jj, &cosine, &sine);
 
                 //Обновление элементов матриц левых сингулярных векторов по столбцам
-                for (size_t k = 0; k < m; ++k) {
+                for (std::size_t k = 0; k < m; ++k) {
                     double left = cosine * U[n * k + i] - sine * U[n * k + j];
                     double right = sine * U[n * k + i] + cosine * U[n * k + j];
                     U[n * k + i] = left;
                     U[n * k + j] = right;
                 }
                 //Обновление элементов матриц правых сингулярных векторов по столбцам
-                for (size_t k = 0; k < n; ++k) {
+                for (std::size_t k = 0; k < n; ++k) {
                     double left = cosine * V[n * k + i] - sine * V[n * k + j];
                     double right = sine * V[n * k + i] + cosine * V[n * k + j];
                     V[n * k + i] = left;
@@ -79,21 +79,22 @@ size_t coloshjac(struct matrix_t Amat, struct vector_t svec, struct matrix_t Uma
                 }
             }
         }
-        sweeps++;
 
-        if (sweeps > 30)
+        if (sweeps > max_sweeps)
             converged = true;
+		else
+			sweeps++;
     } 
     while (!converged);
 
-    if (sweeps > 30)
+    if (sweeps > max_sweeps)
         return 0;
 
     #pragma omp parallel for shared(s, U, n_singular_vals) firstprivate(m, n) schedule(dynamic) if(ThreadsNum > 1)
-    for (size_t i = 0; i < n; ++i) {
+    for (std::size_t i = 0; i < n; ++i) {
         double sigma = 0.0;
         //Вычисление сингулярных чисел
-        for (size_t k = 0; k < m; ++k) {
+        for (std::size_t k = 0; k < m; ++k) {
             sigma += U[n * k + i] * U[n * k + i];
         }
         sigma = sqrt(sigma);
@@ -102,7 +103,7 @@ size_t coloshjac(struct matrix_t Amat, struct vector_t svec, struct matrix_t Uma
             s[i] = sigma;
         }
         //Корректировка левых сингулярных векторов
-        for (size_t k = 0; k < m; ++k) {
+        for (std::size_t k = 0; k < m; ++k) {
             U[n * k + i] /= sigma;
         }
     }
@@ -123,29 +124,32 @@ size_t coloshjac(struct matrix_t Amat, struct vector_t svec, struct matrix_t Uma
  * @param vector_t svec вектор сингулярных чисел
  * @param matrix_t Umat матрица левых сингулярных векторов
  * @param matrix_t Vmat матрица правых сингулярных векторов
- * @return size_t sweeps число разверток методом Якоби
+ * @return std::size_t sweeps число разверток методом Якоби
  **/
-size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, struct matrix_t Vmat, size_t ThreadsNum, double* Time) {
-    const size_t m = Amat.rows; //строки матрицы A
-    const size_t n = Amat.cols; //столбцы матрицы A
-    const size_t n_singular_vals = svec.len; //Длина вектора сингулярных значений
+std::size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, struct matrix_t Vmat, std::size_t ThreadsNum, double* Time, struct string_t errors) {
+    const std::size_t m = Amat.rows; //строки матрицы A
+    const std::size_t n = Amat.cols; //столбцы матрицы A
+    const std::size_t n_singular_vals = svec.len; //Длина вектора сингулярных значений
     const double tol = 10e-15;  //точность предела сходимости
+	std::size_t max_sweeps = 40; //максимальное число повторения итераций
     double t1, t2;              //замер времени
-    size_t sweeps = 0;  //число повторений цикла развертки
+    std::size_t sweeps = 0;  //число повторений цикла развертки
     double norm = 0.0;      //норма Фробениуса матрицы A
     double off_norm = 0.0;  //норма Фробениуса только недиагональных элементов матрицы A
     bool converged = true; //Признак сходимости цикла
 
-    std::vector<size_t> up(ThreadsNum); //массив хранит номер первого блока для одного потока
-    std::vector<size_t> dn(ThreadsNum); //массив хранит номер второго блока для одного потока
+    std::vector<std::size_t> up(ThreadsNum); //массив хранит номер первого блока для одного потока
+    std::vector<std::size_t> dn(ThreadsNum); //массив хранит номер второго блока для одного потока
     std::vector<index_t> SOB(2 * ThreadsNum); //массив хранит пары индексов начала и конца двух блоков (i - индекс начала блока, j - конец) для одного потока
     std::vector<double> cos(m * n);
     std::vector<double> sin (m * n);
 
     //разметка матрицы на блоки (по столбцам)
     bool result = rrbjrs_column_limits(Amat, ThreadsNum, &SOB[0]);
-    if (!result)
-        return 0;
+	if (!result) {
+		*errors.len = sprintf(errors.ptr, "matrix must be correctly divided into blocks");
+		return 0;
+	}
 
     matrix_copy(Umat, Amat); //инициализация рабочей матрицы U как исходная матрица A
     matrix_identity(Vmat); //матрица V как единичная матрица
@@ -155,7 +159,7 @@ size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, 
 
     //инициализация массива пар индексов вращений 
     //нечетными (up[]) и четными (dn[]) числами
-    for (size_t i = 0; i < ThreadsNum; i++) {
+    for (std::size_t i = 0; i < ThreadsNum; i++) {
         up[i] = (2 * i);
         dn[i] = (2 * i) + 1;
     }
@@ -175,15 +179,15 @@ size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, 
     {
         converged = true;
         //цикл ортогонализации блоков матрицы
-    #pragma omp parallel for shared(converged, U, V, SOB) firstprivate(ThreadsNum) schedule(guided) if(ThreadsNum > 1)
-        for (size_t rr_pair = 0; rr_pair < (2 * ThreadsNum); rr_pair++) {
-            size_t ind = 0;
-            for (size_t i = SOB[rr_pair].i; i <= (SOB[rr_pair].j - 1); i++) {
-                for (size_t j = (i + 1); j <= (SOB[rr_pair].j); j++) {
+    #pragma omp parallel for shared(converged, U, V, SOB) firstprivate(ThreadsNum) schedule(static,2) if(ThreadsNum > 1)
+        for (std::size_t rr_pair = 0; rr_pair < (2 * ThreadsNum); rr_pair++) {
+            std::size_t ind = 0;
+            for (std::size_t i = SOB[rr_pair].i; i <= (SOB[rr_pair].j - 1); i++) {
+                for (std::size_t j = (i + 1); j <= (SOB[rr_pair].j); j++) {
                     double dot_ii = 0, dot_jj = 0, dot_ij = 0;
                     //Вычисление суммм квадратов элементов стобцов, в которых расположены
                     //Uii, Uij, Ujj
-                    for (size_t k = 0; k < m; k++) {
+                    for (std::size_t k = 0; k < m; k++) {
                         dot_ii += U[n * k + i] * U[n * k + i];
                         dot_ij += U[n * k + i] * U[n * k + j];
                         dot_jj += U[n * k + j] * U[n * k + j];
@@ -201,17 +205,17 @@ size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, 
                 }
             }
             ind = 0;
-            for (size_t i = SOB[rr_pair].i; i <= (SOB[rr_pair].j - 1); i++) {
-                for (size_t j = (i + 1); j <= (SOB[rr_pair].j); j++) {
+            for (std::size_t i = SOB[rr_pair].i; i <= (SOB[rr_pair].j - 1); i++) {
+                for (std::size_t j = (i + 1); j <= (SOB[rr_pair].j); j++) {
                     //Обновление элементов матриц левых сингулярных векторов по столбцам
-                    for (size_t k = 0; k < m; k++) {
+                    for (std::size_t k = 0; k < m; k++) {
                         double left = cos[ind] * U[n * k + i] - sin[ind] * U[n * k + j];
                         double right = sin[ind] * U[n * k + i] + cos[ind] * U[n * k + j];
                         U[n * k + i] = left;
                         U[n * k + j] = right;
                     }
                     //Обновление элементов матриц правых сингулярных векторов по столбцам
-                    for (size_t k = 0; k < n; k++) {
+                    for (std::size_t k = 0; k < n; k++) {
                         double left = cos[ind] * V[n * k + i] - sin[ind] * V[n * k + j];
                         double right = sin[ind] * V[n * k + i] + cos[ind] * V[n * k + j];
                         V[n * k + i] = left;
@@ -225,16 +229,16 @@ size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, 
         //основной цикл решения сингулярного разложения
         //на каждой итерации, с помощью стратегии распределения блоков между потоками (Round Robin)
         //каждый поток получает свои пары блоков (по 2 блока на поток)
-        for (size_t iteration = 0; iteration < ((2 * ThreadsNum) - 1); iteration++) {
-    #pragma omp parallel for shared(converged, U, V, SOB, up, dn) firstprivate(ThreadsNum) schedule(guided) if(ThreadsNum > 1)
-            for (size_t rr_pair = 0; rr_pair < ThreadsNum; rr_pair++) {
-                size_t ind = 0;
-                for (size_t i = SOB[up[rr_pair]].i; i <= SOB[up[rr_pair]].j; i++) {
-                    for (size_t j = SOB[dn[rr_pair]].i; j <= SOB[dn[rr_pair]].j; j++) {
+        for (std::size_t iteration = 0; iteration < ((2 * ThreadsNum) - 1); iteration++) {
+    #pragma omp parallel for shared(converged, U, V, SOB, up, dn) firstprivate(ThreadsNum) schedule(static,1) if(ThreadsNum > 1)
+            for (std::size_t rr_pair = 0; rr_pair < ThreadsNum; rr_pair++) {
+                std::size_t ind = 0;
+                for (std::size_t i = SOB[up[rr_pair]].i; i <= SOB[up[rr_pair]].j; i++) {
+                    for (std::size_t j = SOB[dn[rr_pair]].i; j <= SOB[dn[rr_pair]].j; j++) {
                         double dot_ii = 0, dot_jj = 0, dot_ij = 0;
                         //Вычисление суммм квадратов элементов стобцов, в которых расположены
                         //Uii, Uij, Ujj
-                        for (size_t k = 0; k < m; k++) {
+                        for (std::size_t k = 0; k < m; k++) {
                             dot_ii += U[n * k + i] * U[n * k + i];
                             dot_ij += U[n * k + i] * U[n * k + j];
                             dot_jj += U[n * k + j] * U[n * k + j];
@@ -253,17 +257,17 @@ size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, 
                 }
 
                 ind = 0;
-                for (size_t i = SOB[up[rr_pair]].i; i <= SOB[up[rr_pair]].j; i++) {
-                    for (size_t j = SOB[dn[rr_pair]].i; j <= SOB[dn[rr_pair]].j; j++) {
+                for (std::size_t i = SOB[up[rr_pair]].i; i <= SOB[up[rr_pair]].j; i++) {
+                    for (std::size_t j = SOB[dn[rr_pair]].i; j <= SOB[dn[rr_pair]].j; j++) {
                         //Обновление элементов матриц левых сингулярных векторов по столбцам
-                        for (size_t k = 0; k < m; k++) {
+                        for (std::size_t k = 0; k < m; k++) {
                             double left = cos[ind] * U[n * k + i] - sin[ind] * U[n * k + j];
                             double right = sin[ind] * U[n * k + i] + cos[ind] * U[n * k + j];
                             U[n * k + i] = left;
                             U[n * k + j] = right;
                         }
                         //Обновление элементов матриц правых сингулярных векторов по столбцам
-                        for (size_t k = 0; k < n; k++) {
+                        for (std::size_t k = 0; k < n; k++) {
                             double left = cos[ind] * V[n * k + i] - sin[ind] * V[n * k + j];
                             double right = sin[ind] * V[n * k + i] + cos[ind] * V[n * k + j];
                             V[n * k + i] = left;
@@ -276,27 +280,29 @@ size_t rrbjrs(struct matrix_t Amat, struct vector_t svec, struct matrix_t Umat, 
             //стратегия распределения блоков между потоками(Round Robin) формирует новые пары блоков для каждого потока
             round_robin(&up[0], &dn[0], ThreadsNum); 
         }
-        sweeps++; //число повторений основного цикла
-
-        if (sweeps > 30)
+        if (sweeps > max_sweeps)
             converged = true;
+		else
+			sweeps++; //число повторений основного цикла
     } while (!converged);
 
-    if (sweeps > 30)
-        return 0;
+	if (sweeps > max_sweeps) {
+		*errors.len = sprintf(errors.ptr, "algorithm did not converge after %lu sweeps", sweeps);
+		return 0;
+	}
 
     #pragma omp parallel for shared(s, U, n) schedule(guided) if(ThreadsNum > 1)
-    for (size_t i = 0; i < n; i++) {
+    for (std::size_t i = 0; i < n; i++) {
         double sigma = 0.0;
         //Вычисление сингулярных чисел
-        for (size_t k = 0; k < m; k++) {
+        for (std::size_t k = 0; k < m; k++) {
             sigma += U[n * k + i] * U[n * k + i];
         }
         sigma = sqrt(sigma);
         s[i] = sigma;
 
         //Корректировка левых сингулярных векторов
-        for (size_t k = 0; k < m; k++) {
+        for (std::size_t k = 0; k < m; k++) {
             U[n * k + i] /= sigma;
         }
     }

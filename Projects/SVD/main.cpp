@@ -2,9 +2,11 @@
 #include <cstdio>
 #include <cassert>
 #include <iostream>
-#include <vector>
+//#include <vector>
 #include <omp.h>
+#ifdef MKL_TEST
 #include <mkl.h>
+#endif //
 #include "src/utils/types.hpp"
 #include "src/utils/util.hpp"
 #include "src/utils/matrix.hpp"
@@ -14,15 +16,15 @@
 int main(int argc, char* argv[])
 {
     std::vector<index_t> sizes = { {100, 100},  {200, 100}, {200, 200}, {300, 100}, {300, 200}, {300, 300}, {500, 100}, {500, 200}, {500, 300}, {500, 500} };
-
-    size_t n; //Размер столбцов матрицы A(mxn)
-    size_t m; //Размер строк матрицы A(mxn)
-    size_t block_size; //Размер блока матрицы (минимум 8)
-    size_t max_threads = omp_get_max_threads();
+    std::size_t n; //Размер столбцов матрицы A(mxn)
+    std::size_t m; //Размер строк матрицы A(mxn)
+    std::size_t block_size; //Размер блока матрицы (минимум 8)
+    std::size_t max_threads = 20;
 
     double time = 0.0;
     char in_path[100];
-    char errors[200];
+    char errors[500];
+	char alg_errors[200];
     char info[200];
 
     std::vector<compute_params> rrbjrs_times(sizes.size() * max_threads);
@@ -30,7 +32,7 @@ int main(int argc, char* argv[])
 	std::vector<compute_params> mkl_dgesvj_times(sizes.size() * max_threads);
 	std::vector<compute_params> rrbnsvd_times(sizes.size() * max_threads);
 
-    for (size_t i = 0; i < sizes.size(); i++) {
+    for (std::size_t i = 0; i < sizes.size(); i++) {
         m = sizes[i].i;
         n = sizes[i].j;
 
@@ -50,55 +52,61 @@ int main(int argc, char* argv[])
         matrix_t U_mat = { &U[0], m, n };
         matrix_t V_mat = { &V[0], m, n };
 
+		//Alg_Errors_str - структура со строкой ошибок выполнения алгоритма
+		//Alg_Errors_len - длина строки ошибок алгоритма
+		std::size_t Alg_Errors_len = 0;
+		string_t Alg_Errors_str = { alg_errors, &Alg_Errors_len };
+
         try
         {
             random_matrix(Data_matr);
         }
         catch (const std::exception&)
         {
-            sprintf(errors, "[ERROR] Can't create %d_%d matrix", m, n);
+            sprintf(errors, "[ERROR] Can't create %lu_%lu matrix", m, n);
             std::cout << errors << std::endl;
             continue;
         }
-
-        for (size_t threads = 1; threads <= max_threads; threads++) {
-            //rrbjrs - Блочный односторонний Якоби со стратегией выбора элементов Round Robin
-            try
-            {
-
-                size_t rrbjrs_iters = rrbjrs(Data_matr, S_vect, U_mat, V_mat, threads, &time);
-                if (rrbjrs_iters <= 0) {
-                    sprintf(errors, "[WARNING] Alg 'rrbjrs' not computed: matrix %d %d, %d threads", m, n, threads);
-                    std::cout << errors << std::endl;
-                }
-                else
-                {
-                    sprintf(info, "Compute alg 'rrbjrs': matrix %d %d, %d threads", m, n, threads);
-                    std::cout << info << std::endl;
-                    rrbjrs_times.push_back({ Data_matr.rows, Data_matr.cols, threads, rrbjrs_iters, time });
-                }
-
-            }
-            catch (const std::exception&)
-            {
-                sprintf(errors, "[ERROR COMPUTATION] in 'rrbjrs': matrix %d %d, %d threads", m, n, threads);
-                std::cout << errors << std::endl;
-            }
-
-			//rrbnsvd - Блочный двусторонний Якоби со стратегией выбора элементов Round Robin
-			size_t rrbnsvd_block_size = 10;
+#ifdef RRBJRS_TEST
+		for (std::size_t threads = 1; threads <= max_threads; threads++) {
+			//rrbjrs - Блочный односторонний Якоби со стратегией выбора элементов Round Robin
 			try
 			{
-				size_t rrbnsvd_iters = 0;
-				if(Data_matr.cols == Data_matr.rows)
-					rrbnsvd_iters = rrbnsvd(Data_matr, B_mat, U_mat, V_mat, rrbnsvd_block_size, threads, &time);
-				if (rrbnsvd_iters <= 0) {
-					sprintf(errors, "[WARNING] Alg 'rrbnsvd' not computed: matrix %d %d, %d threads, %d block size", m, n, threads, rrbnsvd_block_size);
+				*(Alg_Errors_str.len) = 0;
+				std::size_t rrbjrs_iters = rrbjrs(Data_matr, S_vect, U_mat, V_mat, threads, &time, Alg_Errors_str);
+				if (*(Alg_Errors_str.len) > 0) {
+					sprintf(errors, "[WARNING] Alg 'rrbjrs' not computed: matrix %lu %lu, %lu threads. [%s]", m, n, threads, Alg_Errors_str.ptr);
 					std::cout << errors << std::endl;
 				}
 				else
 				{
-					sprintf(info, "Compute alg 'rrbnsvd': matrix %d %d, %d threads, %d block size", m, n, threads, rrbnsvd_block_size);
+					sprintf(info, "[COMPUTED] Alg 'rrbjrs': matrix %lu %lu, %lu threads", m, n, threads);
+					std::cout << info << std::endl;
+					rrbjrs_times.push_back({ Data_matr.rows, Data_matr.cols, threads, rrbjrs_iters, time });
+				}
+
+			}
+			catch (const std::exception&)
+			{
+				sprintf(errors, "[ERROR] In 'rrbjrs': matrix %lu %lu, %lu threads", m, n, threads);
+				std::cout << errors << std::endl;
+			}
+		}
+#endif
+#ifdef RRBNSVD_TEST
+		for (std::size_t threads = 1; threads <= max_threads; threads++) {
+			//rrbnsvd - Блочный двусторонний Якоби со стратегией выбора элементов Round Robin
+			try
+			{
+				*(Alg_Errors_str.len) = 0;
+				std::size_t rrbnsvd_iters = rrbnsvd(Data_matr, B_mat, U_mat, V_mat, threads, &time, Alg_Errors_str);
+				if (*(Alg_Errors_str.len) > 0) {
+					sprintf(errors, "[WARNING] Alg 'rrbnsvd' not computed: matrix %lu %lu, %lu threads. [%s]", m, n, threads, Alg_Errors_str.ptr);
+					std::cout << errors << std::endl;
+				}
+				else
+				{
+					sprintf(info, "[COMPUTED] Alg 'rrbnsvd': matrix %lu %lu, %lu threads", m, n, threads);
 					std::cout << info << std::endl;
 					rrbnsvd_times.push_back({ Data_matr.rows, Data_matr.cols, threads, rrbnsvd_iters, time });
 				}
@@ -106,10 +114,13 @@ int main(int argc, char* argv[])
 			}
 			catch (const std::exception&)
 			{
-				sprintf(errors, "[ERROR COMPUTATION] in 'rrbnsvd': matrix %d %d, %d threads, %d block size", m, n, threads, rrbnsvd_block_size);
+				sprintf(errors, "[ERROR] In 'rrbnsvd': matrix %lu %lu, %lu threads", m, n, threads);
 				std::cout << errors << std::endl;
 			}
-
+		}
+#endif
+#ifdef MKL_TEST
+		for (std::size_t threads = 1; threads <= max_threads; threads++) {
 			//dgesvj - MKL односторонний Якоби со стратегией выбора элементов перестановки столбцов (deRijk98)
 			//void DGESVJ(const char* joba, const char* jobu, const char* jobv,
 			//	const MKL_INT* m, const MKL_INT* n, double* a, const MKL_INT* lda,
@@ -142,12 +153,12 @@ int main(int argc, char* argv[])
 				time = mkl_t2 - mkl_t1;
 
 				if (dgesvj_info != 0) {
-					sprintf(errors, "[WARNING] Alg MKL 'dgesvj' not computed: matrix %d %d, %d threads", m, n, threads);
+					sprintf(errors, "[WARNING] Alg MKL 'dgesvj' not computed: matrix %lu %lu, %lu threads", m, n, threads);
 					std::cout << errors << std::endl;
 				}
 				else
 				{
-					sprintf(info, "Compute alg MKL 'dgesvj': matrix %d %d, %d threads", m, n, threads);
+					sprintf(info, "[COMPUTED] Alg MKL 'dgesvj': matrix %lu %lu, %lu threads", m, n, threads);
 					std::cout << info << std::endl;
 					mkl_dgesvj_times.push_back({ Data_matr.rows, Data_matr.cols, threads, 0, time });
 				}
@@ -155,10 +166,11 @@ int main(int argc, char* argv[])
 			}
 			catch (const std::exception&)
 			{
-				sprintf(errors, "[ERROR COMPUTATION] in MKL 'dgesvj': matrix %d %d, %d threads", m, n, threads);
+				sprintf(errors, "[ERROR] In MKL 'dgesvj': matrix %lu %lu, %lu threads", m, n, threads);
 				std::cout << errors << std::endl;
 			}
-        }
+		}
+#endif
 
     }
 

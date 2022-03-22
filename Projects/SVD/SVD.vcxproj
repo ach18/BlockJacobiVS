@@ -132,9 +132,10 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalOptions>/D "RRBNSVD_TEST" %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -196,6 +197,7 @@
     <None Include="TimeTests\coloshjac_times.to" />
     <None Include="TimeTests\mkl_dgesvj_times.to" />
     <None Include="TimeTests\rrbjrs_times.to" />
+    <None Include="TimeTests\rrbnsvd_times.to" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />

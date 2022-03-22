@@ -3,9 +3,9 @@
 #include "../../utils/matrix.hpp"
 #include "nsvd.hpp"
 
-size_t svd_subprocedure(struct matrix_t Bmat, struct matrix_t Umat, struct matrix_t Vmat) {
-    size_t iter = 0;  //число повторений цикла развертки
-    size_t n = Bmat.rows; //размер матрицы
+std::size_t svd_subprocedure(struct matrix_t Bmat, struct matrix_t Umat, struct matrix_t Vmat) {
+    std::size_t iter = 0;  //число повторений цикла развертки
+    std::size_t n = Bmat.rows; //размер матрицы
     const double tol = 1e-15; //точность предела сходимости
     double* B = Bmat.ptr;
     double* U = Umat.ptr;
@@ -20,8 +20,8 @@ size_t svd_subprocedure(struct matrix_t Bmat, struct matrix_t Umat, struct matri
     matrix_frobenius(Bmat, &norm, &off_norm);
 
     while (sqrt(off_norm) > tol * sqrt(norm)) {
-        for (size_t i = 0; i < n - 1; ++i) {
-            for (size_t j = i + 1; j < n; ++j) {
+        for (std::size_t i = 0; i < n - 1; ++i) {
+            for (std::size_t j = i + 1; j < n; ++j) {
                 double bii = B[n * i + i];
                 double bij = B[n * i + j];
                 double bji = B[n * j + i];
@@ -34,7 +34,7 @@ size_t svd_subprocedure(struct matrix_t Bmat, struct matrix_t Umat, struct matri
                 //выполнение операции J^T*B*J, т.е. обновление строк и столбцов
                 //J - матрица плоских вращений (матрица √ивенса) с cos sin на местах i j
                 //первый цикл обновл€ет строки i j
-                for (size_t k = 0; k < n; k++) {
+                for (std::size_t k = 0; k < n; k++) {
                     double b_ik = B[n * i + k];
                     double b_jk = B[n * j + k];
 
@@ -46,7 +46,7 @@ size_t svd_subprocedure(struct matrix_t Bmat, struct matrix_t Umat, struct matri
                 }
 
                 //второй цикл обновл€ет столбцы i j
-                for (size_t k = 0; k < n; k++) {
+                for (std::size_t k = 0; k < n; k++) {
                     double b_ki = B[n * k + i];
                     double b_kj = B[n * k + j];
 
@@ -58,7 +58,7 @@ size_t svd_subprocedure(struct matrix_t Bmat, struct matrix_t Umat, struct matri
                 }
 
                 //последние два цикла обновл€ют столбцы i j у матриц U V 
-                for (size_t k = 0; k < n; k++) {
+                for (std::size_t k = 0; k < n; k++) {
                     double u_ki = U[n * k + i];
                     double u_kj = U[n * k + j];
 
@@ -69,7 +69,7 @@ size_t svd_subprocedure(struct matrix_t Bmat, struct matrix_t Umat, struct matri
                     U[n * k + j] = right;
                 }
 
-                for (size_t k = 0; k < n; k++) {
+                for (std::size_t k = 0; k < n; k++) {
                     double v_ki = V[n * k + i];
                     double v_kj = V[n * k + j];
 

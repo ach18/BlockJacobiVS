@@ -4,24 +4,29 @@
 
 struct vector_t {
     double* ptr;
-    size_t len;
+    std::size_t len;
 };
 
 struct matrix_t {
     double* ptr;
-    size_t rows;
-    size_t cols;
+    std::size_t rows;
+    std::size_t cols;
 };
 
 struct index_t {
-    size_t i;
-    size_t j;
+    std::size_t i;
+    std::size_t j;
 };
 
 struct compute_params {
-    size_t m;
-    size_t n;
-    size_t threads;
-    size_t iterations;
+    std::size_t m;
+    std::size_t n;
+    std::size_t threads;
+    std::size_t iterations;
     double time;
+};
+
+struct string_t {
+	char* ptr;
+	std::size_t* len;
 };

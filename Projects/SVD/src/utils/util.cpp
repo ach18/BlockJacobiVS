@@ -93,7 +93,7 @@ void matrix_from_file(matrix_t A, const char *path) {
     std::ifstream file;
     file.open(path);
 
-    for (size_t i = 0; i < A.rows * A.cols; i++)
+    for (std::size_t i = 0; i < A.rows * A.cols; i++)
         file >> A.ptr[i];
 
     file.close();
@@ -104,8 +104,8 @@ void matrix_to_file(matrix_t A, const char *path) {
     std::ofstream output(path);
     int n = A.cols;
 
-    for (size_t i = 0; i < A.rows; ++i) {
-        for (size_t j = 0; j < A.cols; ++j) {
+    for (std::size_t i = 0; i < A.rows; ++i) {
+        for (std::size_t j = 0; j < A.cols; ++j) {
             output << std::fixed << A.ptr[n * i + j] << " \t";
         }
         output << "\n";
@@ -115,9 +115,9 @@ void matrix_to_file(matrix_t A, const char *path) {
 
 void compute_params_to_file(std::vector<compute_params> params, const char* path) {
     std::ofstream output(path);
-    output << "|rows|\t|cols|\t|threads|\t|iterations|\t|time|" << "\n\n";
+    output << "|rows|\t|cols|\t|threads|\t|sweeps|\t|time|" << "\n\n";
 
-    for (size_t i = 0; i < params.size(); i++) {
+    for (std::size_t i = 0; i < params.size(); i++) {
         output << std::fixed << params[i].m << "\t" 
             << std::fixed << params[i].n << "\t"
             << std::fixed << params[i].threads << "\t"
@@ -132,7 +132,7 @@ void vector_to_file(vector_t V, const char* path) {
     std::ofstream output(path);
     int n = V.len;
 
-    for (size_t i = 0; i < n; ++i) {
+    for (std::size_t i = 0; i < n; ++i) {
         output << std::fixed << V.ptr[i] << " \t";
     }
     output.close();
@@ -156,15 +156,15 @@ bool modulus_pair(int num_blocks, int index, int iteration, int* i, int* j) {
     }
 }
 
-void round_robin(size_t* up, size_t* dn, size_t ThreadsNum) {
-    size_t x = up[ThreadsNum - 1];
-    size_t y = dn[0];
+void round_robin(std::size_t* up, std::size_t* dn, std::size_t ThreadsNum) {
+    std::size_t x = up[ThreadsNum - 1];
+    std::size_t y = dn[0];
 
-    for (size_t i = (ThreadsNum - 1); i > 0; i--)
+    for (std::size_t i = (ThreadsNum - 1); i > 0; i--)
         up[i] = up[i - 1];
 
     if (ThreadsNum > 2) {
-        for (size_t i = 0; i < (ThreadsNum - 2); i++)
+        for (std::size_t i = 0; i < (ThreadsNum - 2); i++)
             dn[i] = dn[i + 1];
     }
 
@@ -174,10 +174,10 @@ void round_robin(size_t* up, size_t* dn, size_t ThreadsNum) {
     }
 }
 
-bool rrbjrs_column_limits(struct matrix_t A, size_t ThreadsNum, struct index_t* SOB) {
-    size_t quotient = (A.cols / (2 * ThreadsNum)); //размер блоков при кратном деленим
-    size_t remainder = A.cols % (2 * ThreadsNum); //число блоков размера (quotient + 1) при делении с остатком
-    size_t multiple = (2 * ThreadsNum) - remainder; //число блоков размера quotient при кратном делении
+bool rrbjrs_column_limits(struct matrix_t A, std::size_t ThreadsNum, struct index_t* SOB) {
+    std::size_t quotient = (A.cols / (2 * ThreadsNum)); //размер блоков при кратном деленим
+    std::size_t remainder = A.cols % (2 * ThreadsNum); //число блоков размера (quotient + 1) при делении с остатком
+    std::size_t multiple = (2 * ThreadsNum) - remainder; //число блоков размера quotient при кратном делении
 
     if (quotient < 2)
         return false;
@@ -185,13 +185,13 @@ bool rrbjrs_column_limits(struct matrix_t A, size_t ThreadsNum, struct index_t* 
     SOB[0].i = 0;
     SOB[0].j = quotient - 1;
 
-    for (size_t i = 1; i < multiple; i++) {
+    for (std::size_t i = 1; i < multiple; i++) {
         SOB[i].i = SOB[i - 1].j + 1;
         SOB[i].j = SOB[i].i + (quotient - 1);
     }
 
     if (remainder > 0) {
-        for (size_t i = multiple; i < (multiple + remainder); i++) {
+        for (std::size_t i = multiple; i < (multiple + remainder); i++) {
             SOB[i].i = SOB[i - 1].j + 1;
             SOB[i].j = SOB[i].i + quotient;
         }
@@ -200,6 +200,6 @@ bool rrbjrs_column_limits(struct matrix_t A, size_t ThreadsNum, struct index_t* 
 }
 
 void random_matrix(matrix_t A) {
-    for (size_t i = 0; i < (A.rows * A.cols); i++)
+    for (std::size_t i = 0; i < (A.rows * A.cols); i++)
         A.ptr[i] = rand() % 100;
 }

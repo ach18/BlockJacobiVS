@@ -86,7 +86,7 @@ void compute_params_to_file(std::vector<compute_params> params, const char* path
 
 bool modulus_pair(int num_blocks, int index, int iteration, int* i, int* j);
 
-bool rrbjrs_column_limits(struct matrix_t A, size_t ThreadsNum, struct index_t* SOB);
-void round_robin(size_t* up, size_t* dn, size_t ThreadsNum);
+bool rrbjrs_column_limits(struct matrix_t A, std::size_t ThreadsNum, struct index_t* SOB);
+void round_robin(std::size_t* up, std::size_t* dn, std::size_t ThreadsNum);
 
 void random_matrix(matrix_t A);

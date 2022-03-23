@@ -31,6 +31,7 @@ int main(int argc, char* argv[])
 	std::vector<compute_params> mkl_dgesvj_times(sizes.size() * max_threads);
 	std::vector<compute_params> rrbnsvd_times(sizes.size() * max_threads);
 
+	std::cout << "Singular Value Decomposition" << std::endl;
     for (std::size_t i = 0; i < sizes.size(); i++) {
         m = sizes[i].i;
         n = sizes[i].j;
@@ -66,6 +67,7 @@ int main(int argc, char* argv[])
             continue;
         }
 #ifdef RRBJRS_TEST
+		std::cout << "Alg RRBJRS - 1D Blocked Jacobi with Round Robin pivoting" << std::endl;
 		for (std::size_t threads = 1; threads <= max_threads; threads++) {
 			//rrbjrs - Блочный односторонний Якоби со стратегией выбора элементов Round Robin
 			try
@@ -92,6 +94,7 @@ int main(int argc, char* argv[])
 		}
 #endif
 #ifdef RRBNSVD_TEST
+		std::cout << "Alg RRBNSVD - 2D Blocked Jacobi with Round Robin pivoting" << std::endl;
 		for (std::size_t threads = 1; threads <= max_threads; threads++) {
 			//rrbnsvd - Блочный двусторонний Якоби со стратегией выбора элементов Round Robin
 			try
@@ -118,6 +121,7 @@ int main(int argc, char* argv[])
 		}
 #endif
 #ifdef MKL_TEST
+		std::cout << "Alg DGESVJ - 1D Jacobi with column interchanges pivoting" << std::endl;
 		for (std::size_t threads = 1; threads <= max_threads; threads++) {
 			//dgesvj - MKL односторонний Якоби со стратегией выбора элементов перестановки столбцов (deRijk98)
 			//void DGESVJ(const char* joba, const char* jobu, const char* jobv,

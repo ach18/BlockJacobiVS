@@ -16,4 +16,4 @@ std::size_t coloshjac(struct matrix_t A, struct vector_t s, struct matrix_t U, s
 * Ѕлочный односторонний метод якоби (Block Jacobi Relaxasion),
 * Ѕлоки выбираютс€ в соответствии со стратегией шахматного турнира (Round Robin) 
 **/
-std::size_t rrbjrs(struct matrix_t A, struct vector_t s, struct matrix_t U, struct matrix_t V, std::size_t ThreadsNum, double* Time, struct string_t errors);
+std::size_t rrbjrs(struct matrix_t A, struct matrix_t Bmat, struct vector_t s, struct matrix_t U, struct matrix_t V, std::size_t ThreadsNum, double* Time, struct string_t errors);

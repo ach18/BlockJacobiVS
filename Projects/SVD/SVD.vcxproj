@@ -135,7 +135,7 @@
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalOptions>/D "RRBNSVD_TEST" /D "RRBJRS_TEST" /D "MKL_TEST" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/D "RRBNSVD" /D "PRRBNSVD" /D "RRBNSVD_AVX" /D "PRRBJRS" %(AdditionalOptions)</AdditionalOptions>
       <OpenMPSupport>true</OpenMPSupport>
       <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>

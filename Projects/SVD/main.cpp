@@ -8,14 +8,16 @@
 #include "src/utils/matrix.hpp"
 #include "src/svd/one-sided/svd.hpp"
 #include "src/svd/two-sided/svd.hpp"
+#pragma GCC target("avx2")
 
 int main(int argc, char* argv[])
 {
-	std::vector<index_t> sizes = { {100, 100}, {200, 100}, {200, 200}, {300, 100}, {300, 200}, {300, 300}, {500, 100}, {500, 200}, {500, 300}, {500, 500} };
+	std::vector<index_t> sizes = { {3000, 3000} };
 	std::size_t n; //Размер столбцов матрицы A(mxn)
     std::size_t m; //Размер строк матрицы A(mxn)
     std::size_t block_size; //Размер блока матрицы (минимум 10)
 	std::size_t max_threads = omp_get_num_procs();
+	bool vectorization = false;
 
     double time = 0.0;
     char in_path[100];
@@ -23,9 +25,12 @@ int main(int argc, char* argv[])
 	char alg_errors[200];
     char info[200];
 
-    std::vector<compute_params> rrbjrs_times(sizes.size() * max_threads);
+    std::vector<compute_params> prrbjrs_times(sizes.size() * max_threads);
     std::vector<compute_params> coloshjac_times(sizes.size() * max_threads);
 	std::vector<compute_params> rrbnsvd_times(sizes.size() * max_threads);
+	std::vector<compute_params> prrbnsvd_times(sizes.size() * max_threads);
+	std::vector<compute_params> rrbnsvd_avx_times(sizes.size() * max_threads);
+	std::vector<compute_params> prrbnsvd_avx_times(sizes.size() * max_threads);
 
 	std::cout << "Singular Value Decomposition" << std::endl;
     for (std::size_t i = 0; i < sizes.size(); i++) {
@@ -62,8 +67,8 @@ int main(int argc, char* argv[])
             std::cout << errors << std::endl;
             continue;
         }
-#ifdef RRBJRS_TEST
-		std::cout << "Alg RRBJRS - 1D Blocked Jacobi with Round Robin pivoting" << std::endl;
+#ifdef PRRBJRS
+		std::cout << "\nParallel RRBJRS - 1D Blocked Jacobi with Round Robin pivoting" << std::endl;
 		for (std::size_t threads = 1; threads <= max_threads; threads++) {
 			//rrbjrs - Блочный односторонний Якоби со стратегией выбора элементов Round Robin
 			try
@@ -71,52 +76,144 @@ int main(int argc, char* argv[])
 				*(Alg_Errors_str.len) = 0;
 				std::size_t rrbjrs_iters = rrbjrs(Data_matr, B_mat, S_vect, U_mat, V_mat, threads, &time, Alg_Errors_str);
 				if (*(Alg_Errors_str.len) > 0) {
-					sprintf(errors, "[WARNING] Alg 'rrbjrs' not computed: matrix %lu %lu, %lu threads. [%s]", m, n, threads, Alg_Errors_str.ptr);
+					sprintf(errors, "[WARNING] not computed: %lu %lu, %lu threads. [%s]", m, n, threads, Alg_Errors_str.ptr);
 					std::cout << errors << std::endl;
 				}
 				else
 				{
-					sprintf(info, "[COMPUTED] Alg 'rrbjrs': matrix %lu %lu, %lu threads", m, n, threads);
+					sprintf(info, "[COMPUTED] %lu %lu, %lu threads", m, n, threads);
 					std::cout << info << std::endl;
-					rrbjrs_times.push_back({ Data_matr.rows, Data_matr.cols, threads, rrbjrs_iters, time });
+					prrbjrs_times.push_back({ Data_matr.rows, Data_matr.cols, threads, rrbjrs_iters, time });
 				}
 
 			}
 			catch (const std::exception&)
 			{
-				sprintf(errors, "[ERROR] In 'rrbjrs': matrix %lu %lu, %lu threads", m, n, threads);
+				sprintf(errors, "[ERROR] %lu %lu, %lu threads", m, n, threads);
 				std::cout << errors << std::endl;
 			}
 		}
 #endif
-#ifdef RRBNSVD_TEST
-		std::cout << "Alg RRBNSVD - 2D Blocked Jacobi with Round Robin pivoting" << std::endl;
+
+#ifdef RRBNSVD
+		std::cout << "\nRRBNSVD - 2D Blocked Jacobi with Round Robin pivoting" << std::endl;
+		for (std::size_t rr_pairs = 1; rr_pairs <= max_threads; rr_pairs++) {
+			//rrbnsvd - Блочный двусторонний Якоби со стратегией выбора элементов Round Robin
+			try
+			{
+				*(Alg_Errors_str.len) = 0;
+				std::size_t rrbnsvd_iters;
+				rrbnsvd_iters = rrbnsvd_seq(Data_matr, B_mat, U_mat, V_mat, rr_pairs, vectorization, &time, Alg_Errors_str);
+				if (*(Alg_Errors_str.len) > 0) {
+					sprintf(errors, "[WARNING] not computed: %lu %lu, %lu threads. [%s]", m, n, rr_pairs, Alg_Errors_str.ptr);
+					std::cout << errors << std::endl;
+				}
+				else
+				{
+					sprintf(info, "[COMPUTED] %lu %lu, %lu threads", m, n, rr_pairs);
+					std::cout << info << std::endl;
+					rrbnsvd_times.push_back({ Data_matr.rows, Data_matr.cols, rr_pairs, rrbnsvd_iters, time });
+				}
+
+			}
+			catch (const std::exception&)
+			{
+				sprintf(errors, "[ERROR] %lu %lu, %lu threads", m, n, rr_pairs);
+				std::cout << errors << std::endl;
+			}
+		}
+#endif
+
+#ifdef PRRBNSVD
+		std::cout << "\nParallel RRBNSVD - 2D Blocked Jacobi with Round Robin pivoting" << std::endl;
 		for (std::size_t threads = 1; threads <= max_threads; threads++) {
 			//rrbnsvd - Блочный двусторонний Якоби со стратегией выбора элементов Round Robin
 			try
 			{
 				*(Alg_Errors_str.len) = 0;
-				std::size_t rrbnsvd_iters = rrbnsvd(Data_matr, B_mat, U_mat, V_mat, threads, &time, Alg_Errors_str);
+				std::size_t rrbnsvd_iters;
+				rrbnsvd_iters = rrbnsvd_parallel(Data_matr, B_mat, U_mat, V_mat, threads, vectorization, &time, Alg_Errors_str);
 				if (*(Alg_Errors_str.len) > 0) {
-					sprintf(errors, "[WARNING] Alg 'rrbnsvd' not computed: matrix %lu %lu, %lu threads. [%s]", m, n, threads, Alg_Errors_str.ptr);
+					sprintf(errors, "[WARNING] not computed: %lu %lu, %lu threads. [%s]", m, n, threads, Alg_Errors_str.ptr);
 					std::cout << errors << std::endl;
 				}
 				else
 				{
-					sprintf(info, "[COMPUTED] Alg 'rrbnsvd': matrix %lu %lu, %lu threads", m, n, threads);
+					sprintf(info, "[COMPUTED] %lu %lu, %lu threads", m, n, threads);
 					std::cout << info << std::endl;
-					rrbnsvd_times.push_back({ Data_matr.rows, Data_matr.cols, threads, rrbnsvd_iters, time });
+					prrbnsvd_times.push_back({ Data_matr.rows, Data_matr.cols, threads, rrbnsvd_iters, time });
 				}
 
 			}
 			catch (const std::exception&)
 			{
-				sprintf(errors, "[ERROR] In 'rrbnsvd': matrix %lu %lu, %lu threads", m, n, threads);
+				sprintf(errors, "[ERROR] %lu %lu, %lu threads", m, n, threads);
 				std::cout << errors << std::endl;
 			}
 		}
 #endif
 
+#ifdef RRBNSVD_AVX
+		vectorization = true;
+		std::cout << "\nRRBNSVD AVX - 2D Blocked Jacobi with Round Robin pivoting" << std::endl;
+		for (std::size_t rr_pairs = 1; rr_pairs <= max_threads; rr_pairs++) {
+			//rrbnsvd - Блочный двусторонний Якоби со стратегией выбора элементов Round Robin
+			try
+			{
+				*(Alg_Errors_str.len) = 0;
+				std::size_t rrbnsvd_iters;
+				rrbnsvd_iters = rrbnsvd_seq(Data_matr, B_mat, U_mat, V_mat, rr_pairs, vectorization, &time, Alg_Errors_str);
+				if (*(Alg_Errors_str.len) > 0) {
+					sprintf(errors, "[WARNING] not computed: %lu %lu, %lu threads. [%s]", m, n, rr_pairs, Alg_Errors_str.ptr);
+					std::cout << errors << std::endl;
+				}
+				else
+				{
+					sprintf(info, "[COMPUTED] %lu %lu, %lu threads", m, n, rr_pairs);
+					std::cout << info << std::endl;
+					rrbnsvd_avx_times.push_back({ Data_matr.rows, Data_matr.cols, rr_pairs, rrbnsvd_iters, time });
+				}
+
+			}
+			catch (const std::exception&)
+			{
+				sprintf(errors, "[ERROR] %lu %lu, %lu threads", m, n, rr_pairs);
+				std::cout << errors << std::endl;
+			}
+		}
+		!vectorization;
+#endif
+
+#ifdef PRRBNSVD_AVX
+		vectorization = true;
+		std::cout << "\nParallel RRBNSVD AVX - 2D Blocked Jacobi with Round Robin pivoting" << std::endl;
+		for (std::size_t threads = 1; threads <= max_threads; threads++) {
+			//rrbnsvd - Блочный двусторонний Якоби со стратегией выбора элементов Round Robin
+			try
+			{
+				*(Alg_Errors_str.len) = 0;
+				std::size_t rrbnsvd_iters;
+				rrbnsvd_iters = rrbnsvd_parallel(Data_matr, B_mat, U_mat, V_mat, threads, vectorization, &time, Alg_Errors_str);
+				if (*(Alg_Errors_str.len) > 0) {
+					sprintf(errors, "[WARNING] not computed: %lu %lu, %lu threads. [%s]", m, n, threads, Alg_Errors_str.ptr);
+					std::cout << errors << std::endl;
+				}
+				else
+				{
+					sprintf(info, "[COMPUTED] %lu %lu, %lu threads", m, n, threads);
+					std::cout << info << std::endl;
+					prrbnsvd_avx_times.push_back({ Data_matr.rows, Data_matr.cols, threads, rrbnsvd_iters, time });
+				}
+
+			}
+			catch (const std::exception&)
+			{
+				sprintf(errors, "[ERROR] %lu %lu, %lu threads", m, n, threads);
+				std::cout << errors << std::endl;
+			}
+		}
+		!vectorization;
+#endif
     }
 
     //результаты методов записываются в файл
@@ -124,9 +221,21 @@ int main(int argc, char* argv[])
     // число потоков
     // число итераций
     // время
-    compute_params_to_file(rrbjrs_times, "./TimeTests/rrbjrs_times.to");
-    compute_params_to_file(coloshjac_times, "./TimeTests/coloshjac_times.to");
-	compute_params_to_file(rrbnsvd_times, "./TimeTests/rrbnsvd_times.to");
+#ifdef PRRBJRS 
+	compute_params_to_file(prrbjrs_times, "./TimeTests/prrbjrs_times.to");
+#endif 
+#ifdef RRBNSVD
+	compute_params_to_file(coloshjac_times, "./TimeTests/rrbnsvd_times.to");
+#endif
+#ifdef PRRBNSVD
+	compute_params_to_file(coloshjac_times, "./TimeTests/prrbnsvd_times.to");
+#endif
+#ifdef RRBNSVD_AVX
+	compute_params_to_file(coloshjac_times, "./TimeTests/rrbnsvd_avx_times.to");
+#endif
+#ifdef PRRBNSVD_AVX
+	compute_params_to_file(coloshjac_times, "./TimeTests/prrbnsvd_avx_times.to");
+#endif
     return 0;
 }
 

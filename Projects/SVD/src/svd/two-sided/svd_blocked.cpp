@@ -172,7 +172,6 @@ std::size_t rrbnsvd_parallel(struct matrix_t Amat, struct matrix_t Bmat, struct 
 	std::size_t subproblem_blocks = 4; //число блоков, которое формирует подзадачу
 	std::size_t max_sweeps = 40; //максимальное число повторения итераций
 	std::size_t sweeps = 0;  //число повторений цикла развертки
-	std::size_t block_iter = 0;
 	const double tol = 1e-10;  //точность предела сходимости
 	std::size_t n = Amat.rows; //размер матрицы
 	double norm = 0.0;      //норма Фробениуса матрицы B
@@ -201,6 +200,11 @@ std::size_t rrbnsvd_parallel(struct matrix_t Amat, struct matrix_t Bmat, struct 
 		return 0;
 	}
 
+	if (vectorization && (n % (4*rr_pairs) != 0)) {
+		*errors.len = sprintf(errors.ptr, "matrix must be correctly divided into blocks for vectorization");
+		return 0;
+	}
+
 	//если строка/столбец состоят из двух блоков, лучше вычислить SVD классическим не блочным Якоби
 	if (n <= 2 * block_size) {
 		t1 = omp_get_wtime();
@@ -211,6 +215,11 @@ std::size_t rrbnsvd_parallel(struct matrix_t Amat, struct matrix_t Bmat, struct 
 			block_iters = svd_subprocedure(Bmat, Umat, Vmat);
 		t2 = omp_get_wtime();
 		*Time = t2 - t1;
+
+		if (block_iters == 0) {
+			*errors.len = sprintf(errors.ptr, "algorithm did not converge after %lu sweeps", block_iters);
+			return 0;
+		}
 		return block_iters;
 	}
 
@@ -271,9 +280,9 @@ std::size_t rrbnsvd_parallel(struct matrix_t Amat, struct matrix_t Bmat, struct 
 			//вычисление SVD разложения циклическим методом Якоби над блоком Bblockmat
 			//Bblockmat используется только в этой процедуре для упрощения обращения к индексам внутри
 			if(vectorization)
-				block_iter += svd_subprocedure_vectorized(Bblockmat, Ublockmat, Vblockmat);
+				svd_subprocedure_vectorized(Bblockmat, Ublockmat, Vblockmat);
 			else
-				block_iter += svd_subprocedure(Bblockmat, Ublockmat, Vblockmat);
+				svd_subprocedure(Bblockmat, Ublockmat, Vblockmat);
 
 			//транспонировать блок матрицы U 
 			matrix_transpose(Ublockmat, Ublockmat);
@@ -366,7 +375,6 @@ std::size_t rrbnsvd_seq(struct matrix_t Amat, struct matrix_t Bmat, struct matri
 	std::size_t subproblem_blocks = 4; //число блоков, которое формирует подзадачу
 	std::size_t max_sweeps = 40; //максимальное число повторения итераций
 	std::size_t sweeps = 0;  //число повторений цикла развертки
-	std::size_t block_iter = 0;
 	const double tol = 1e-10;  //точность предела сходимости
 	std::size_t n = Amat.rows; //размер матрицы
 	double norm = 0.0;      //норма Фробениуса матрицы B
@@ -395,6 +403,11 @@ std::size_t rrbnsvd_seq(struct matrix_t Amat, struct matrix_t Bmat, struct matri
 		return 0;
 	}
 
+	if (vectorization && (n % (4 * rr_pairs) != 0)) {
+		*errors.len = sprintf(errors.ptr, "matrix must be correctly divided into blocks for vectorization");
+		return 0;
+	}
+
 	//если строка/столбец состоят из двух блоков, лучше вычислить SVD классическим не блочным Якоби
 	if (n <= 2 * block_size) {
 		t1 = omp_get_wtime();
@@ -405,6 +418,11 @@ std::size_t rrbnsvd_seq(struct matrix_t Amat, struct matrix_t Bmat, struct matri
 			block_iters = svd_subprocedure(Bmat, Umat, Vmat);
 		t2 = omp_get_wtime();
 		*Time = t2 - t1;
+
+		if (block_iters == 0) {
+			*errors.len = sprintf(errors.ptr, "algorithm did not converge after %lu sweeps", block_iters);
+			return 0;
+		}
 		return block_iters;
 	}
 
@@ -457,10 +475,16 @@ std::size_t rrbnsvd_seq(struct matrix_t Amat, struct matrix_t Bmat, struct matri
 
 				//вычисление SVD разложения циклическим методом Якоби над блоком Bblockmat
 				//Bblockmat используется только в этой процедуре для упрощения обращения к индексам внутри
+				std::size_t subproc_iter;
 				if (vectorization)
-					block_iter += svd_subprocedure_vectorized(Bblockmat, Ublockmat, Vblockmat);
+					subproc_iter = svd_subprocedure_vectorized(Bblockmat, Ublockmat, Vblockmat);
 				else
-					block_iter += svd_subprocedure(Bblockmat, Ublockmat, Vblockmat);
+					subproc_iter = svd_subprocedure(Bblockmat, Ublockmat, Vblockmat);
+
+				if (subproc_iter == 0) {
+					*errors.len = sprintf(errors.ptr, "algorithm did not converge after %lu sweeps", sweeps);
+					return 0;
+				}
 
 				//транспонировать блок матрицы U 
 				matrix_transpose(Ublockmat, Ublockmat);
@@ -479,7 +503,6 @@ std::size_t rrbnsvd_seq(struct matrix_t Amat, struct matrix_t Bmat, struct matri
 					matrix_add(M1mat, M2mat, M2mat);
 					copy_block(M2mat, 0, 0, Bmat, j_block, k_block, block_size);
 				}
-#pragma omp barrier
 				//обновление блоков исходной матрицы B по столбцам i j с помощью V
 				for (std::size_t k_block = 0; k_block < n_blocks; ++k_block) {
 					mult_block(Bmat, k_block, i_block, Vblockmat, 0, 0, M1mat, 0, 0, block_size);

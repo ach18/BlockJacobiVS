@@ -8,15 +8,15 @@
 #include "src/utils/matrix.hpp"
 #include "src/svd/one-sided/svd.hpp"
 #include "src/svd/two-sided/svd.hpp"
-#pragma GCC target("avx2")
 
 int main(int argc, char* argv[])
 {
-	std::vector<index_t> sizes = { {3000, 3000} };
+	std::vector<index_t> sizes = { {800, 800} };
 	std::size_t n; //Размер столбцов матрицы A(mxn)
     std::size_t m; //Размер строк матрицы A(mxn)
     std::size_t block_size; //Размер блока матрицы (минимум 10)
-	std::size_t max_threads = omp_get_num_procs();
+	std::size_t max_threads = omp_get_max_threads();
+	std::size_t start_thread = max_threads; // 1 ... max_threads
 	bool vectorization = false;
 
     double time = 0.0;
@@ -25,8 +25,8 @@ int main(int argc, char* argv[])
 	char alg_errors[200];
     char info[200];
 
+	std::vector<compute_params> coloshjac_times(sizes.size() * max_threads);
     std::vector<compute_params> prrbjrs_times(sizes.size() * max_threads);
-    std::vector<compute_params> coloshjac_times(sizes.size() * max_threads);
 	std::vector<compute_params> rrbnsvd_times(sizes.size() * max_threads);
 	std::vector<compute_params> prrbnsvd_times(sizes.size() * max_threads);
 	std::vector<compute_params> rrbnsvd_avx_times(sizes.size() * max_threads);
@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
         }
 #ifdef PRRBJRS
 		std::cout << "\nParallel RRBJRS - 1D Blocked Jacobi with Round Robin pivoting" << std::endl;
-		for (std::size_t threads = 1; threads <= max_threads; threads++) {
+		for (std::size_t threads = start_thread; threads <= max_threads; threads++) {
 			//rrbjrs - Блочный односторонний Якоби со стратегией выбора элементов Round Robin
 			try
 			{
@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
 
 #ifdef RRBNSVD
 		std::cout << "\nRRBNSVD - 2D Blocked Jacobi with Round Robin pivoting" << std::endl;
-		for (std::size_t rr_pairs = 1; rr_pairs <= max_threads; rr_pairs++) {
+		for (std::size_t rr_pairs = start_thread; rr_pairs <= max_threads; rr_pairs++) {
 			//rrbnsvd - Блочный двусторонний Якоби со стратегией выбора элементов Round Robin
 			try
 			{
@@ -126,7 +126,7 @@ int main(int argc, char* argv[])
 
 #ifdef PRRBNSVD
 		std::cout << "\nParallel RRBNSVD - 2D Blocked Jacobi with Round Robin pivoting" << std::endl;
-		for (std::size_t threads = 1; threads <= max_threads; threads++) {
+		for (std::size_t threads = start_thread; threads <= max_threads; threads++) {
 			//rrbnsvd - Блочный двусторонний Якоби со стратегией выбора элементов Round Robin
 			try
 			{
@@ -156,7 +156,7 @@ int main(int argc, char* argv[])
 #ifdef RRBNSVD_AVX
 		vectorization = true;
 		std::cout << "\nRRBNSVD AVX - 2D Blocked Jacobi with Round Robin pivoting" << std::endl;
-		for (std::size_t rr_pairs = 1; rr_pairs <= max_threads; rr_pairs++) {
+		for (std::size_t rr_pairs = start_thread; rr_pairs <= max_threads; rr_pairs++) {
 			//rrbnsvd - Блочный двусторонний Якоби со стратегией выбора элементов Round Robin
 			try
 			{
@@ -187,7 +187,7 @@ int main(int argc, char* argv[])
 #ifdef PRRBNSVD_AVX
 		vectorization = true;
 		std::cout << "\nParallel RRBNSVD AVX - 2D Blocked Jacobi with Round Robin pivoting" << std::endl;
-		for (std::size_t threads = 1; threads <= max_threads; threads++) {
+		for (std::size_t threads = start_thread; threads <= max_threads; threads++) {
 			//rrbnsvd - Блочный двусторонний Якоби со стратегией выбора элементов Round Robin
 			try
 			{
@@ -225,16 +225,16 @@ int main(int argc, char* argv[])
 	compute_params_to_file(prrbjrs_times, "./TimeTests/prrbjrs_times.to");
 #endif 
 #ifdef RRBNSVD
-	compute_params_to_file(coloshjac_times, "./TimeTests/rrbnsvd_times.to");
+	compute_params_to_file(rrbnsvd_times, "./TimeTests/rrbnsvd_times.to");
 #endif
 #ifdef PRRBNSVD
-	compute_params_to_file(coloshjac_times, "./TimeTests/prrbnsvd_times.to");
+	compute_params_to_file(prrbnsvd_times, "./TimeTests/prrbnsvd_times.to");
 #endif
 #ifdef RRBNSVD_AVX
-	compute_params_to_file(coloshjac_times, "./TimeTests/rrbnsvd_avx_times.to");
+	compute_params_to_file(rrbnsvd_avx_times, "./TimeTests/rrbnsvd_avx_times.to");
 #endif
 #ifdef PRRBNSVD_AVX
-	compute_params_to_file(coloshjac_times, "./TimeTests/prrbnsvd_avx_times.to");
+	compute_params_to_file(prrbnsvd_avx_times, "./TimeTests/prrbnsvd_avx_times.to");
 #endif
     return 0;
 }

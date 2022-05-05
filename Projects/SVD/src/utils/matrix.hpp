@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.hpp"
+#include <mkl.h>
 
 /**
  * @brief Initialize an identity matrix
@@ -49,3 +50,5 @@ void matrix_off_frobenius(matrix_t m, double* off_norm);
  */
 
 void matrix_frobenius(matrix_t m, double* norm, double* off_norm);
+void matrix_frobenius_vectorized(matrix_t m, double* norm, double* off_norm);
+void matrix_off_frobenius_vectorized(matrix_t m, double* off_norm);

@@ -7,10 +7,16 @@ struct vector_t {
     std::size_t len;
 };
 
+/*
+* double* ptr - указатель на одноразмерный массив
+* std::size_t rows, cols - число строк и столбцов матрицы
+* char storage - тип хранения элементов в памяти: 'R' по строкам, 'C' по столбцам
+*/
 struct matrix_t {
     double* ptr;
     std::size_t rows;
     std::size_t cols;
+    char storage;
 };
 
 struct index_t {

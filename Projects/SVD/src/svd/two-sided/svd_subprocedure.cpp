@@ -128,10 +128,10 @@ size_t svd_subprocedure_vectorized(struct matrix_t Bmat, struct matrix_t Umat, s
 				__m256d v_s1k = _mm256_set1_pd(s1k);
 				__m256d v_c1k = _mm256_set1_pd(c1k);
 				for (; k + 7 < n; k += 8) {
-					vi_0 = _mm256_load_pd(B + n * i + (k + 0));
-					vi_1 = _mm256_load_pd(B + n * i + (k + 4));
-					vj_0 = _mm256_load_pd(B + n * j + (k + 0));
-					vj_1 = _mm256_load_pd(B + n * j + (k + 4));
+					vi_0 = _mm256_loadu_pd(B + n * i + (k + 0));
+					vi_1 = _mm256_loadu_pd(B + n * i + (k + 4));
+					vj_0 = _mm256_loadu_pd(B + n * j + (k + 0));
+					vj_1 = _mm256_loadu_pd(B + n * j + (k + 4));
 
 					left_0 = _mm256_mul_pd(v_s, vj_0);
 					left_1 = _mm256_mul_pd(v_s, vj_1);
@@ -143,10 +143,10 @@ size_t svd_subprocedure_vectorized(struct matrix_t Bmat, struct matrix_t Umat, s
 					right_0 = _mm256_fmadd_pd(v_s1k, vi_0, right_0);
 					right_1 = _mm256_fmadd_pd(v_s1k, vi_1, right_1);
 
-					_mm256_store_pd(B + n * i + k + 0, left_0);
-					_mm256_store_pd(B + n * i + k + 4, left_1);
-					_mm256_store_pd(B + n * j + k + 0, right_0);
-					_mm256_store_pd(B + n * j + k + 4, right_1);
+					_mm256_storeu_pd(B + n * i + k + 0, left_0);
+					_mm256_storeu_pd(B + n * i + k + 4, left_1);
+					_mm256_storeu_pd(B + n * j + k + 0, right_0);
+					_mm256_storeu_pd(B + n * j + k + 4, right_1);
 				}
 				for (; k < n; ++k) {
 					double b_ik = B[n * i + k];
@@ -161,14 +161,10 @@ size_t svd_subprocedure_vectorized(struct matrix_t Bmat, struct matrix_t Umat, s
 				v_c = _mm256_set1_pd(cf.c2);
 				v_s = _mm256_set1_pd(cf.s2);
 				for (; k + 7 < n; k += 8) {
-					vi_0 =
-						_mm256_set_pd(B[n * (k + 0) + i], B[n * (k + 1) + i], B[n * (k + 2) + i], B[n * (k + 3) + i]);
-					vi_1 =
-						_mm256_set_pd(B[n * (k + 4) + i], B[n * (k + 5) + i], B[n * (k + 6) + i], B[n * (k + 7) + i]);
-					vj_0 =
-						_mm256_set_pd(B[n * (k + 0) + j], B[n * (k + 1) + j], B[n * (k + 2) + j], B[n * (k + 3) + j]);
-					vj_1 =
-						_mm256_set_pd(B[n * (k + 4) + j], B[n * (k + 5) + j], B[n * (k + 6) + j], B[n * (k + 7) + j]);
+					vi_0 = _mm256_set_pd(B[n * (k + 0) + i], B[n * (k + 1) + i], B[n * (k + 2) + i], B[n * (k + 3) + i]);
+					vi_1 = _mm256_set_pd(B[n * (k + 4) + i], B[n * (k + 5) + i], B[n * (k + 6) + i], B[n * (k + 7) + i]);
+					vj_0 = _mm256_set_pd(B[n * (k + 0) + j], B[n * (k + 1) + j], B[n * (k + 2) + j], B[n * (k + 3) + j]);
+					vj_1 = _mm256_set_pd(B[n * (k + 4) + j], B[n * (k + 5) + j], B[n * (k + 6) + j], B[n * (k + 7) + j]);
 
 					left_0 = _mm256_mul_pd(v_s, vj_0);
 					left_1 = _mm256_mul_pd(v_s, vj_1);
@@ -214,14 +210,10 @@ size_t svd_subprocedure_vectorized(struct matrix_t Bmat, struct matrix_t Umat, s
 				v_c = _mm256_set1_pd(cf.c1);
 				v_s = _mm256_set1_pd(cf.s1);
 				for (; k + 7 < n; k += 8) {
-					vi_0 =
-						_mm256_set_pd(U[n * (k + 0) + i], U[n * (k + 1) + i], U[n * (k + 2) + i], U[n * (k + 3) + i]);
-					vi_1 =
-						_mm256_set_pd(U[n * (k + 4) + i], U[n * (k + 5) + i], U[n * (k + 6) + i], U[n * (k + 7) + i]);
-					vj_0 =
-						_mm256_set_pd(U[n * (k + 0) + j], U[n * (k + 1) + j], U[n * (k + 2) + j], U[n * (k + 3) + j]);
-					vj_1 =
-						_mm256_set_pd(U[n * (k + 4) + j], U[n * (k + 5) + j], U[n * (k + 6) + j], U[n * (k + 7) + j]);
+					vi_0 = _mm256_set_pd(U[n * (k + 0) + i], U[n * (k + 1) + i], U[n * (k + 2) + i], U[n * (k + 3) + i]);
+					vi_1 = _mm256_set_pd(U[n * (k + 4) + i], U[n * (k + 5) + i], U[n * (k + 6) + i], U[n * (k + 7) + i]);
+					vj_0 = _mm256_set_pd(U[n * (k + 0) + j], U[n * (k + 1) + j], U[n * (k + 2) + j], U[n * (k + 3) + j]);
+					vj_1 = _mm256_set_pd(U[n * (k + 4) + j], U[n * (k + 5) + j], U[n * (k + 6) + j], U[n * (k + 7) + j]);
 
 					left_0 = _mm256_mul_pd(v_s, vj_0);
 					left_1 = _mm256_mul_pd(v_s, vj_1);
@@ -267,14 +259,10 @@ size_t svd_subprocedure_vectorized(struct matrix_t Bmat, struct matrix_t Umat, s
 				v_c = _mm256_set1_pd(cf.c2);
 				v_s = _mm256_set1_pd(cf.s2);
 				for (; k + 7 < n; k += 8) {
-					vi_0 =
-						_mm256_set_pd(V[n * (k + 0) + i], V[n * (k + 1) + i], V[n * (k + 2) + i], V[n * (k + 3) + i]);
-					vi_1 =
-						_mm256_set_pd(V[n * (k + 4) + i], V[n * (k + 5) + i], V[n * (k + 6) + i], V[n * (k + 7) + i]);
-					vj_0 =
-						_mm256_set_pd(V[n * (k + 0) + j], V[n * (k + 1) + j], V[n * (k + 2) + j], V[n * (k + 3) + j]);
-					vj_1 =
-						_mm256_set_pd(V[n * (k + 4) + j], V[n * (k + 5) + j], V[n * (k + 6) + j], V[n * (k + 7) + j]);
+					vi_0 = _mm256_set_pd(V[n * (k + 0) + i], V[n * (k + 1) + i], V[n * (k + 2) + i], V[n * (k + 3) + i]);
+					vi_1 = _mm256_set_pd(V[n * (k + 4) + i], V[n * (k + 5) + i], V[n * (k + 6) + i], V[n * (k + 7) + i]);
+					vj_0 = _mm256_set_pd(V[n * (k + 0) + j], V[n * (k + 1) + j], V[n * (k + 2) + j], V[n * (k + 3) + j]);
+					vj_1 = _mm256_set_pd(V[n * (k + 4) + j], V[n * (k + 5) + j], V[n * (k + 6) + j], V[n * (k + 7) + j]);
 
 					left_0 = _mm256_mul_pd(v_s, vj_0);
 					left_1 = _mm256_mul_pd(v_s, vj_1);

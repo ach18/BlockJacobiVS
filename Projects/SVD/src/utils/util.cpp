@@ -113,9 +113,9 @@ void matrix_to_file(matrix_t A, const char *path) {
     output.close();
 }
 
-void compute_params_to_file(std::vector<compute_params> params, const char* path) {
+void compute_params_to_file(const char* message, std::vector<compute_params> params, const char* path) {
     std::ofstream output(path, std::ofstream::app);
-    output << "|rows|\t|cols|\t|threads|\t|sweeps|\t|time|" << "\n\n";
+    output << message << "\n|rows|\t|cols|\t|threads|\t|sweeps|\t|time|" << "\n\n";
 
     for (std::size_t i = 0; i < params.size(); i++) {
         output << std::fixed << params[i].m << "\t" 

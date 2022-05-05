@@ -82,7 +82,7 @@ void matrix_from_file(matrix_t A, const char *path);
 void matrix_to_file(matrix_t A, const char *path);
 void vector_to_file(vector_t V, const char* path);
 
-void compute_params_to_file(std::vector<compute_params> params, const char* path);
+void compute_params_to_file(const char* message, std::vector<compute_params> params, const char* path);
 
 bool modulus_pair(int num_blocks, int index, int iteration, int* i, int* j);
 

@@ -255,11 +255,11 @@ std::size_t rrbnsvd_parallel(struct matrix_t Amat, struct matrix_t Bmat, struct 
 			std::vector<double> M2(block_size * block_size);
 
 			//хранение блоков в виде структур matrix_t
-			matrix_t Bblockmat = { &Bblock[0], 2 * block_size, 2 * block_size, 'R' };
-			matrix_t Ublockmat = { &Ublock[0], 2 * block_size, 2 * block_size, 'R' };
-			matrix_t Vblockmat = { &Vblock[0], 2 * block_size, 2 * block_size, 'R' };
-			matrix_t M1mat = { &M1[0], block_size, block_size, 'R' };
-			matrix_t M2mat = { &M2[0], block_size, block_size, 'R' };
+			matrix_t Bblockmat = { &Bblock[0], 2 * block_size, 2 * block_size, Bmat.storage };
+			matrix_t Ublockmat = { &Ublock[0], 2 * block_size, 2 * block_size, Umat.storage };
+			matrix_t Vblockmat = { &Vblock[0], 2 * block_size, 2 * block_size, Vmat.storage };
+			matrix_t M1mat = { &M1[0], block_size, block_size, Bmat.storage };
+			matrix_t M2mat = { &M2[0], block_size, block_size, Bmat.storage };
 
 			int rr_pair = omp_get_thread_num();
 			std::size_t i_block = up[rr_pair];

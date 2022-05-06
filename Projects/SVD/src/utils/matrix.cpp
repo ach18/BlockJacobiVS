@@ -9,13 +9,18 @@ void matrix_identity(matrix_t Pmat) {
     const std::size_t M = Pmat.rows;
     const std::size_t N = Pmat.cols;
 
+    size_t index;
     for (std::size_t i = 0; i < M; i++) {
         for (std::size_t j = 0; j < N; j++) {
+            index = i * N + j;
+            if (Pmat.storage = 'C')
+                index = j * N + i;
+
             if (i == j) {
-                P[i * N + j] = 1.0;
+                P[index] = 1.0;
             }
             else {
-                P[i * N + j] = 0.0;
+                P[index] = 0.0;
             }
         }
     }
@@ -119,13 +124,27 @@ void matrix_off_frobenius(matrix_t m, double* off_norm) {
     double* data = m.ptr;
     double off_diag_elems_sum = 0.0;  // sum m[i][j]^2 for 0 < i < M and 0 < j < N and i == j
 
-    for (std::size_t i = 0; i < M; ++i) {
-        for (std::size_t j = 0; j < N; ++j) {
-            if (i == j) {
-                continue;
+    if (m.storage == 'C') {
+        for (std::size_t i = 0; i < M; ++i) {
+            for (std::size_t j = 0; j < N; ++j) {
+                if (i == j) {
+                    continue;
+                }
+                else {
+                    off_diag_elems_sum += data[N * j + i] * data[N * j + j];
+                }
             }
-            else {
-                off_diag_elems_sum += data[N * i + j] * data[N * i + j];
+        }
+    }
+    else {
+        for (std::size_t i = 0; i < M; ++i) {
+            for (std::size_t j = 0; j < N; ++j) {
+                if (i == j) {
+                    continue;
+                }
+                else {
+                    off_diag_elems_sum += data[N * i + j] * data[N * i + j];
+                }
             }
         }
     }

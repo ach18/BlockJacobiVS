@@ -11,13 +11,13 @@
 //#pragma GCC target("avx2")
 int main(int argc, char* argv[])
 {
-	std::vector<index_t> sizes = { {512, 512}, {1024, 1024}, {2048, 2048} };
+	std::vector<index_t> sizes = { {512, 512}, {1024, 1024} };
 	std::size_t n; //Размер столбцов матрицы A(mxn)
     std::size_t m; //Размер строк матрицы A(mxn)
     std::size_t block_size; //Размер блока матрицы (минимум 10)
-	std::size_t max_threads = omp_get_max_threads()*4;
+	std::size_t max_threads = omp_get_max_threads();
 	std::size_t start_thread = max_threads; // 1 ... max_threads
-	std::string inf_message = "\nO2 ftree-vectorize custom load/store unaligned";
+	std::string inf_message = "\nO2 ftree-vectorize, loadu/storeu of columns, unaligned columns data store";
 	bool vectorization = false;
 
     double time = 0.0;
@@ -35,25 +35,37 @@ int main(int argc, char* argv[])
 
 	std::cout << "Singular Value Decomposition" << std::endl;
 #ifdef PRRBJRS
-		std::cout << "\nParallel RRBJRS - 1D Blocked Jacobi with Round Robin pivoting" << std::endl;
+#ifdef COLWISE
+		std::cout << "\nParallel RRBJRS - 1D Blocked Jacobi with Round Robin pivoting, column wise storage" << std::endl;
+#else
+		std::cout << "\nParallel RRBJRS - 1D Blocked Jacobi with Round Robin pivoting, row wise storage" << std::endl;
+#endif
 		for (std::size_t i = 0; i < sizes.size(); i++) {
 			m = sizes[i].i;
 			n = sizes[i].j;
 			//Объявление структур и типов данных
 			std::vector<double> A(m * n);
 			std::vector<double> B(m * n);
-			std::vector<double> S(n);
-			std::vector<double> U(m * m, 0);
-			std::vector<double> V(n * n, 0);
+			std::vector<double> S(m * n);
+			std::vector<double> U(m * n, 0);
+			std::vector<double> V(m * n, 0);
 			//Data_matr - исходная матрица A
 			//B_mat, S_vect - сингулярные числа матрицы
 			//U_mat - левые сингулярные векторы
 			//V_mat - правые сингулярные векторы
+#ifdef COLWISE
+			matrix_t Data_matr = { &A[0], m, n, 'C' };
+			matrix_t B_mat = { &B[0], m, n, 'C' };
+			vector_t S_vect = { &S[0], n };
+			matrix_t U_mat = { &U[0], m, m, 'C' };
+			matrix_t V_mat = { &V[0], n, n, 'C' };
+#else
 			matrix_t Data_matr = { &A[0], m, n, 'R' };
 			matrix_t B_mat = { &B[0], m, n, 'R' };
 			vector_t S_vect = { &S[0], n };
 			matrix_t U_mat = { &U[0], m, m, 'R' };
 			matrix_t V_mat = { &V[0], n, n, 'R' };
+#endif
 
 			//Alg_Errors_str - структура со строкой ошибок выполнения алгоритма
 			//Alg_Errors_len - длина строки ошибок алгоритма
@@ -98,26 +110,37 @@ int main(int argc, char* argv[])
 #endif
 
 #ifdef RRBNSVD
-		std::cout << "\nRRBNSVD - 2D Blocked Jacobi with Round Robin pivoting" << std::endl;
+#ifdef COLWISE
+		std::cout << "\nRRBNSVD - 2D Blocked Jacobi with Round Robin pivoting, column wise storage" << std::endl;
+#else
+		std::cout << "\nRRBNSVD - 2D Blocked Jacobi with Round Robin pivoting, row wise storage" << std::endl;
+#endif
 		for (std::size_t i = 0; i < sizes.size(); i++) {
 			m = sizes[i].i;
 			n = sizes[i].j;
 			//Объявление структур и типов данных
 			std::vector<double> A(m * n);
 			std::vector<double> B(m * n);
-			std::vector<double> S(n);
-			std::vector<double> U(m * m, 0);
-			std::vector<double> V(n * n, 0);
+			std::vector<double> S(m * n);
+			std::vector<double> U(m * n, 0);
+			std::vector<double> V(m * n, 0);
 			//Data_matr - исходная матрица A
 			//B_mat, S_vect - сингулярные числа матрицы
 			//U_mat - левые сингулярные векторы
 			//V_mat - правые сингулярные векторы
+#ifdef COLWISE
+			matrix_t Data_matr = { &A[0], m, n, 'C' };
+			matrix_t B_mat = { &B[0], m, n, 'C' };
+			vector_t S_vect = { &S[0], n };
+			matrix_t U_mat = { &U[0], m, m, 'C' };
+			matrix_t V_mat = { &V[0], n, n, 'C' };
+#else
 			matrix_t Data_matr = { &A[0], m, n, 'R' };
 			matrix_t B_mat = { &B[0], m, n, 'R' };
 			vector_t S_vect = { &S[0], n };
 			matrix_t U_mat = { &U[0], m, m, 'R' };
 			matrix_t V_mat = { &V[0], n, n, 'R' };
-
+#endif
 			//Alg_Errors_str - структура со строкой ошибок выполнения алгоритма
 			//Alg_Errors_len - длина строки ошибок алгоритма
 			std::size_t Alg_Errors_len = 0;
@@ -162,26 +185,37 @@ int main(int argc, char* argv[])
 #endif
 
 #ifdef PRRBNSVD
-		std::cout << "\nParallel RRBNSVD - 2D Blocked Jacobi with Round Robin pivoting" << std::endl;
+ #ifdef COLWISE
+		std::cout << "\nParallel RRBNSVD - 2D Blocked Jacobi with Round Robin pivoting, column wise storage" << std::endl;
+ #else
+		std::cout << "\nParallel RRBNSVD - 2D Blocked Jacobi with Round Robin pivoting, row wise storage" << std::endl;
+ #endif
 		for (std::size_t i = 0; i < sizes.size(); i++) {
 			m = sizes[i].i;
 			n = sizes[i].j;
 			//Объявление структур и типов данных
-			std::vector<double> A(m * n);
-			std::vector<double> B(m * n);
-			std::vector<double> S(n);
-			std::vector<double> U(m * m, 0);
-			std::vector<double> V(n * n, 0);
+			std::vector<double> A(m* n);
+			std::vector<double> B(m* n);
+			std::vector<double> S(m* n);
+			std::vector<double> U(m* n, 0);
+			std::vector<double> V(m* n, 0);
 			//Data_matr - исходная матрица A
 			//B_mat, S_vect - сингулярные числа матрицы
 			//U_mat - левые сингулярные векторы
 			//V_mat - правые сингулярные векторы
+#ifdef COLWISE
+			matrix_t Data_matr = { &A[0], m, n, 'C' };
+			matrix_t B_mat = { &B[0], m, n, 'C' };
+			vector_t S_vect = { &S[0], n };
+			matrix_t U_mat = { &U[0], m, m, 'C' };
+			matrix_t V_mat = { &V[0], n, n, 'C' };
+#else
 			matrix_t Data_matr = { &A[0], m, n, 'R' };
 			matrix_t B_mat = { &B[0], m, n, 'R' };
 			vector_t S_vect = { &S[0], n };
 			matrix_t U_mat = { &U[0], m, m, 'R' };
 			matrix_t V_mat = { &V[0], n, n, 'R' };
-
+#endif
 			//Alg_Errors_str - структура со строкой ошибок выполнения алгоритма
 			//Alg_Errors_len - длина строки ошибок алгоритма
 			std::size_t Alg_Errors_len = 0;
@@ -227,26 +261,37 @@ int main(int argc, char* argv[])
 
 #ifdef RRBNSVD_AVX
 		vectorization = true;
-		std::cout << "\nRRBNSVD AVX - 2D Blocked Jacobi with Round Robin pivoting" << std::endl;
+#ifdef COLWISE
+		std::cout << "\nRRBNSVD AVX - 2D Blocked Jacobi with Round Robin pivoting, column wise storage" << std::endl;
+#else
+		std::cout << "\nRRBNSVD AVX - 2D Blocked Jacobi with Round Robin pivoting, row wise storage" << std::endl;
+#endif
 		for (std::size_t i = 0; i < sizes.size(); i++) {
 			m = sizes[i].i;
 			n = sizes[i].j;
 			//Объявление структур и типов данных
-			std::vector<double> A(m * n);
-			std::vector<double> B(m * n);
-			std::vector<double> S(n);
-			std::vector<double> U(m * m, 0);
-			std::vector<double> V(n * n, 0);
+			std::vector<double> A(m* n);
+			std::vector<double> B(m* n);
+			std::vector<double> S(m* n);
+			std::vector<double> U(m* n, 0);
+			std::vector<double> V(m* n, 0);
 			//Data_matr - исходная матрица A
 			//B_mat, S_vect - сингулярные числа матрицы
 			//U_mat - левые сингулярные векторы
 			//V_mat - правые сингулярные векторы
+#ifdef COLWISE
+			matrix_t Data_matr = { &A[0], m, n, 'C' };
+			matrix_t B_mat = { &B[0], m, n, 'C' };
+			vector_t S_vect = { &S[0], n };
+			matrix_t U_mat = { &U[0], m, m, 'C' };
+			matrix_t V_mat = { &V[0], n, n, 'C' };
+#else
 			matrix_t Data_matr = { &A[0], m, n, 'R' };
 			matrix_t B_mat = { &B[0], m, n, 'R' };
 			vector_t S_vect = { &S[0], n };
 			matrix_t U_mat = { &U[0], m, m, 'R' };
 			matrix_t V_mat = { &V[0], n, n, 'R' };
-
+#endif
 			//Alg_Errors_str - структура со строкой ошибок выполнения алгоритма
 			//Alg_Errors_len - длина строки ошибок алгоритма
 			std::size_t Alg_Errors_len = 0;
@@ -293,26 +338,37 @@ int main(int argc, char* argv[])
 
 #ifdef PRRBNSVD_AVX
 		vectorization = true;
-		std::cout << "\nParallel RRBNSVD AVX - 2D Blocked Jacobi with Round Robin pivoting" << std::endl;
+#ifdef COLWISE
+		std::cout << "\nParallel RRBNSVD AVX - 2D Blocked Jacobi with Round Robin pivoting, column wise storage" << std::endl;
+#else
+		std::cout << "\nParallel RRBNSVD AVX - 2D Blocked Jacobi with Round Robin pivoting, row wise storage" << std::endl;
+#endif
 		for (std::size_t i = 0; i < sizes.size(); i++) {
 			m = sizes[i].i;
 			n = sizes[i].j;
 			//Объявление структур и типов данных
-			std::vector<double> A(m * n);
-			std::vector<double> B(m * n);
-			std::vector<double> S(n);
-			std::vector<double> U(m * m, 0);
-			std::vector<double> V(n * n, 0);
+			std::vector<double> A(m* n);
+			std::vector<double> B(m* n);
+			std::vector<double> S(m* n);
+			std::vector<double> U(m* n, 0);
+			std::vector<double> V(m* n, 0);
 			//Data_matr - исходная матрица A
 			//B_mat, S_vect - сингулярные числа матрицы
 			//U_mat - левые сингулярные векторы
 			//V_mat - правые сингулярные векторы
+#ifdef COLWISE
+			matrix_t Data_matr = { &A[0], m, n, 'C' };
+			matrix_t B_mat = { &B[0], m, n, 'C' };
+			vector_t S_vect = { &S[0], n };
+			matrix_t U_mat = { &U[0], m, m, 'C' };
+			matrix_t V_mat = { &V[0], n, n, 'C' };
+#else
 			matrix_t Data_matr = { &A[0], m, n, 'R' };
 			matrix_t B_mat = { &B[0], m, n, 'R' };
 			vector_t S_vect = { &S[0], n };
 			matrix_t U_mat = { &U[0], m, m, 'R' };
 			matrix_t V_mat = { &V[0], n, n, 'R' };
-
+#endif
 			//Alg_Errors_str - структура со строкой ошибок выполнения алгоритма
 			//Alg_Errors_len - длина строки ошибок алгоритма
 			std::size_t Alg_Errors_len = 0;

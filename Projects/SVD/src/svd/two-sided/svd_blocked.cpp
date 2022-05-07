@@ -481,10 +481,10 @@ std::size_t rrbnsvd_seq(struct matrix_t Amat, struct matrix_t Bmat, struct matri
 				else
 					subproc_iter = svd_subprocedure(Bblockmat, Ublockmat, Vblockmat);
 
-				if (subproc_iter == 0) {
-					*errors.len = sprintf(errors.ptr, "algorithm did not converge after %lu sweeps", sweeps);
-					return 0;
-				}
+				//if (subproc_iter == 0) {
+				//	*errors.len = sprintf(errors.ptr, "algorithm did not converge after %lu sweeps", sweeps);
+				//	return 0;
+				//}
 
 				//транспонировать блок матрицы U 
 				matrix_transpose(Ublockmat, Ublockmat);

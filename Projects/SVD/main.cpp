@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
 	std::size_t n; //Размер столбцов матрицы A(mxn)
     std::size_t m; //Размер строк матрицы A(mxn)
     std::size_t block_size; //Размер блока матрицы (минимум 10)
-	std::size_t max_threads = omp_get_max_threads();
+	std::size_t max_threads = 4;//omp_get_max_threads();
 	std::size_t start_thread = max_threads; // 1 ... max_threads
 	std::string inf_message = "\nO2 ftree-vectorize, unaligned columns data store";
 	bool vectorization = false;
@@ -26,11 +26,10 @@ int main(int argc, char* argv[])
 	char alg_errors[200];
     char info[200];
 
-	std::vector<compute_params> coloshjac_times(sizes.size() * (max_threads - start_thread));
     std::vector<compute_params> prrbjrs_times(sizes.size() * (max_threads - start_thread));
-	std::vector<compute_params> rrbnsvd_times(sizes.size() * (max_threads - start_thread));
+	std::vector<compute_params> colbnsvd_times(sizes.size() * (max_threads - start_thread));
 	std::vector<compute_params> prrbnsvd_times(sizes.size() * (max_threads - start_thread));
-	std::vector<compute_params> rrbnsvd_avx_times(sizes.size() * (max_threads - start_thread));
+	std::vector<compute_params> colbnsvd_avx_times(sizes.size() * (max_threads - start_thread));
 	std::vector<compute_params> prrbnsvd_avx_times(sizes.size() * (max_threads - start_thread));
 
 	std::cout << "Singular Value Decomposition" << std::endl;
@@ -422,13 +421,13 @@ int main(int argc, char* argv[])
 	compute_params_to_file(&inf_message[0], prrbjrs_times, "./TimeTests/prrbjrs_times.to");
 #endif 
 #ifdef COLBNSVD
-	compute_params_to_file(&inf_message[0], rrbnsvd_times, "./TimeTests/colbnsvd_times.to");
+	compute_params_to_file(&inf_message[0], colbnsvd_times, "./TimeTests/colbnsvd_times.to");
 #endif
 #ifdef PRRBNSVD
 	compute_params_to_file(&inf_message[0], prrbnsvd_times, "./TimeTests/prrbnsvd_times.to");
 #endif
 #ifdef COLBNSVD_AVX
-	compute_params_to_file(&inf_message[0], rrbnsvd_avx_times, "./TimeTests/colbnsvd_avx_times.to");
+	compute_params_to_file(&inf_message[0], colbnsvd_avx_times, "./TimeTests/colbnsvd_avx_times.to");
 #endif
 #ifdef PRRBNSVD_AVX
 	compute_params_to_file(&inf_message[0], prrbnsvd_avx_times, "./TimeTests/prrbnsvd_avx_times.to");

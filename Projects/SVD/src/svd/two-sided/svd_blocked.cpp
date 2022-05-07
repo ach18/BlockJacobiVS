@@ -104,10 +104,10 @@ std::size_t colbnsvd(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t
 				else
 					subproc_iter = svd_subprocedure(Bblockmat, Ublockmat, Vblockmat);
 
-				if (subproc_iter == 0) {
-					*errors.len = sprintf(errors.ptr, "algorithm did not converge after %lu sweeps", sweeps);
-					return 0;
-				}
+				//if (subproc_iter == 0) {
+				//	*errors.len = sprintf(errors.ptr, "algorithm did not converge after %lu sweeps", sweeps);
+				//	return 0;
+				//}
 
 				//транспонировать блок матрицы U 
 				matrix_transpose(Ublockmat, Ublockmat);

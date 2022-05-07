@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
     std::size_t block_size; //Размер блока матрицы (минимум 10)
 	std::size_t max_threads = omp_get_max_threads();
 	std::size_t start_thread = max_threads; // 1 ... max_threads
-	std::string inf_message = "\nO2 ftree-vectorize, loadu/storeu of columns, unaligned columns data store";
+	std::string inf_message = "\nO2 ftree-vectorize, unaligned columns data store";
 	bool vectorization = false;
 
     double time = 0.0;
@@ -109,11 +109,11 @@ int main(int argc, char* argv[])
 		}
 #endif
 
-#ifdef RRBNSVD
+#ifdef COLBNSVD
 #ifdef COLWISE
-		std::cout << "\nRRBNSVD - 2D Blocked Jacobi with Round Robin pivoting, column wise storage" << std::endl;
+		std::cout << "\nCOLBNSVD - 2D Blocked Jacobi, column wise storage" << std::endl;
 #else
-		std::cout << "\nRRBNSVD - 2D Blocked Jacobi with Round Robin pivoting, row wise storage" << std::endl;
+		std::cout << "\nCOLBNSVD - 2D Blocked Jacobi, row wise storage" << std::endl;
 #endif
 		for (std::size_t i = 0; i < sizes.size(); i++) {
 			m = sizes[i].i;
@@ -156,28 +156,28 @@ int main(int argc, char* argv[])
 				std::cout << errors << std::endl;
 				continue;
 			}
-			for (std::size_t rr_pairs = start_thread; rr_pairs <= max_threads; rr_pairs++) {
-				//rrbnsvd - Блочный двусторонний Якоби со стратегией выбора элементов Round Robin
+			for (std::size_t block_size = start_thread; block_size <= max_threads; block_size++) {
+				//colbnsvd - Блочный двусторонний Якоби с последовательным перебором по столбцам и заданным размером блока
 				try
 				{
 					*(Alg_Errors_str.len) = 0;
 					std::size_t rrbnsvd_iters;
-					rrbnsvd_iters = rrbnsvd_seq(Data_matr, B_mat, U_mat, V_mat, rr_pairs, vectorization, &time, Alg_Errors_str);
+					rrbnsvd_iters = colbnsvd(Data_matr, B_mat, U_mat, V_mat, block_size, vectorization, &time, Alg_Errors_str);
 					if (*(Alg_Errors_str.len) > 0) {
-						sprintf(errors, "[WARNING] not computed: %lu %lu, %lu threads. [%s]", m, n, rr_pairs, Alg_Errors_str.ptr);
+						sprintf(errors, "[WARNING] not computed: %lu %lu, %lu block size. [%s]", m, n, block_size, Alg_Errors_str.ptr);
 						std::cout << errors << std::endl;
 					}
 					else
 					{
-						sprintf(info, "[COMPUTED] %lu %lu, %lu threads", m, n, rr_pairs);
+						sprintf(info, "[COMPUTED] %lu %lu, %lu block size", m, n, block_size);
 						std::cout << info << std::endl;
-						rrbnsvd_times.push_back({ Data_matr.rows, Data_matr.cols, rr_pairs, rrbnsvd_iters, time });
+						rrbnsvd_times.push_back({ Data_matr.rows, Data_matr.cols, block_size, rrbnsvd_iters, time });
 					}
 
 				}
 				catch (const std::exception&)
 				{
-					sprintf(errors, "[ERROR] %lu %lu, %lu threads", m, n, rr_pairs);
+					sprintf(errors, "[ERROR] %lu %lu, %lu block size", m, n, block_size);
 					std::cout << errors << std::endl;
 				}
 			}
@@ -259,12 +259,12 @@ int main(int argc, char* argv[])
 		}
 #endif
 
-#ifdef RRBNSVD_AVX
+#ifdef COLBNSVD_AVX
 		vectorization = true;
 #ifdef COLWISE
-		std::cout << "\nRRBNSVD AVX - 2D Blocked Jacobi with Round Robin pivoting, column wise storage" << std::endl;
+		std::cout << "\nCOLBNSVD AVX - 2D Blocked Jacobi, column wise storage" << std::endl;
 #else
-		std::cout << "\nRRBNSVD AVX - 2D Blocked Jacobi with Round Robin pivoting, row wise storage" << std::endl;
+		std::cout << "\nCOLBNSVD AVX - 2D Blocked Jacobi, row wise storage" << std::endl;
 #endif
 		for (std::size_t i = 0; i < sizes.size(); i++) {
 			m = sizes[i].i;
@@ -307,28 +307,28 @@ int main(int argc, char* argv[])
 				std::cout << errors << std::endl;
 				continue;
 			}
-			for (std::size_t rr_pairs = start_thread; rr_pairs <= max_threads; rr_pairs++) {
-				//rrbnsvd - Блочный двусторонний Якоби со стратегией выбора элементов Round Robin
+			for (std::size_t block_size = start_thread; block_size <= max_threads; block_size++) {
+				//colbnsvd - Блочный двусторонний Якоби с последовательным перебором по столбцам и заданным размером блока
 				try
 				{
 					*(Alg_Errors_str.len) = 0;
 					std::size_t rrbnsvd_iters;
-					rrbnsvd_iters = rrbnsvd_seq(Data_matr, B_mat, U_mat, V_mat, rr_pairs, vectorization, &time, Alg_Errors_str);
+					rrbnsvd_iters = colbnsvd(Data_matr, B_mat, U_mat, V_mat, block_size, vectorization, &time, Alg_Errors_str);
 					if (*(Alg_Errors_str.len) > 0) {
-						sprintf(errors, "[WARNING] not computed: %lu %lu, %lu threads. [%s]", m, n, rr_pairs, Alg_Errors_str.ptr);
+						sprintf(errors, "[WARNING] not computed: %lu %lu, %lu block size. [%s]", m, n, block_size, Alg_Errors_str.ptr);
 						std::cout << errors << std::endl;
 					}
 					else
 					{
-						sprintf(info, "[COMPUTED] %lu %lu, %lu threads", m, n, rr_pairs);
+						sprintf(info, "[COMPUTED] %lu %lu, %lu block size", m, n, block_size);
 						std::cout << info << std::endl;
-						rrbnsvd_avx_times.push_back({ Data_matr.rows, Data_matr.cols, rr_pairs, rrbnsvd_iters, time });
+						rrbnsvd_times.push_back({ Data_matr.rows, Data_matr.cols, block_size, rrbnsvd_iters, time });
 					}
 
 				}
 				catch (const std::exception&)
 				{
-					sprintf(errors, "[ERROR] %lu %lu, %lu threads", m, n, rr_pairs);
+					sprintf(errors, "[ERROR] %lu %lu, %lu block size", m, n, block_size);
 					std::cout << errors << std::endl;
 				}
 			}
@@ -421,14 +421,14 @@ int main(int argc, char* argv[])
 #ifdef PRRBJRS 
 	compute_params_to_file(&inf_message[0], prrbjrs_times, "./TimeTests/prrbjrs_times.to");
 #endif 
-#ifdef RRBNSVD
-	compute_params_to_file(&inf_message[0], rrbnsvd_times, "./TimeTests/rrbnsvd_times.to");
+#ifdef COLBNSVD
+	compute_params_to_file(&inf_message[0], rrbnsvd_times, "./TimeTests/colbnsvd_times.to");
 #endif
 #ifdef PRRBNSVD
 	compute_params_to_file(&inf_message[0], prrbnsvd_times, "./TimeTests/prrbnsvd_times.to");
 #endif
-#ifdef RRBNSVD_AVX
-	compute_params_to_file(&inf_message[0], rrbnsvd_avx_times, "./TimeTests/rrbnsvd_avx_times.to");
+#ifdef COLBNSVD_AVX
+	compute_params_to_file(&inf_message[0], rrbnsvd_avx_times, "./TimeTests/colbnsvd_avx_times.to");
 #endif
 #ifdef PRRBNSVD_AVX
 	compute_params_to_file(&inf_message[0], prrbnsvd_avx_times, "./TimeTests/prrbnsvd_avx_times.to");

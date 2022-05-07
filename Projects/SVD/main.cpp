@@ -170,7 +170,7 @@ int main(int argc, char* argv[])
 					{
 						sprintf(info, "[COMPUTED] %lu %lu, %lu block size", m, n, block_size);
 						std::cout << info << std::endl;
-						rrbnsvd_times.push_back({ Data_matr.rows, Data_matr.cols, block_size, rrbnsvd_iters, time });
+						colbnsvd_times.push_back({ Data_matr.rows, Data_matr.cols, block_size, rrbnsvd_iters, time });
 					}
 
 				}
@@ -321,7 +321,7 @@ int main(int argc, char* argv[])
 					{
 						sprintf(info, "[COMPUTED] %lu %lu, %lu block size", m, n, block_size);
 						std::cout << info << std::endl;
-						rrbnsvd_times.push_back({ Data_matr.rows, Data_matr.cols, block_size, rrbnsvd_iters, time });
+						colbnsvd_avx_times.push_back({ Data_matr.rows, Data_matr.cols, block_size, rrbnsvd_iters, time });
 					}
 
 				}

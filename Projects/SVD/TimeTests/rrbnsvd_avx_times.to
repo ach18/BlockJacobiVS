@@ -4,3 +4,25 @@
 0	0	0	0	0.000000	
 800	800	1	11	166.527931	
 800	800	2	4	217.284090	
+
+O2 ftree-vectorize, unaligned columns data store
+|rows|	|cols|	|threads|	|sweeps|	|time|
+
+
+O2 ftree-vectorize, unaligned columns data store
+|rows|	|cols|	|threads|	|sweeps|	|time|
+
+512	512	8	8	1.584915	
+1024	1024	8	9	14.338219	
+
+O2 ftree-vectorize, unaligned columns data store
+|rows|	|cols|	|threads|	|sweeps|	|time|
+
+512	512	16	10	3.049358	
+1024	1024	16	10	12.400608	
+
+O2 ftree-vectorize, unaligned columns data store
+|rows|	|cols|	|threads|	|sweeps|	|time|
+
+512	512	4	8	2.397050	
+1024	1024	4	8	30.497764	

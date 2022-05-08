@@ -821,3 +821,17 @@ O2 ftree-vectorize, loadu/storeu of columns, unaligned columns data store
 
 512	512	1	11	7.211918	
 1024	1024	1	11	143.952943	
+
+O2 ftree-vectorize, unaligned columns data store, block-size is L1 Cache
+|rows|	|cols|	|threads|	|sweeps|	|time|
+
+
+O2 ftree-vectorize, unaligned columns data store, block-size is L1 Cache
+|rows|	|cols|	|threads|	|sweeps|	|time|
+
+512	512	8	7	1.450136	
+512	512	16	7	1.293263	
+512	512	32	7	1.423270	
+1024	1024	8	9	9.199317	
+1024	1024	16	9	10.548948	
+1024	1024	32	9	11.921827	

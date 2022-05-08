@@ -12,34 +12,49 @@
 int main(int argc, char* argv[])
 {
 	std::vector<index_t> sizes = { {512, 512}, {1024, 1024} };
+	std::vector<std::size_t> threads_list = { 8, 16, 32 }; //список задаваемых потоков
 	std::size_t n; //Размер столбцов матрицы A(mxn)
     std::size_t m; //Размер строк матрицы A(mxn)
     std::size_t block_size; //Размер блока матрицы (минимум 10)
-	std::size_t max_threads = 8;//omp_get_max_threads();
+	std::size_t max_threads = 4;//omp_get_max_threads();
 	std::size_t start_thread = max_threads; // 1 ... max_threads
-	std::string inf_message = "\nO2 ftree-vectorize, unaligned columns data store";
-	bool vectorization = false;
+	std::string inf_message = "\nO2 ftree-vectorize";
+#ifdef COLWISE
+	inf_message.append(", unaligned columns data store");
+#else
+	inf_message.append("unaligned rows data store");
+#endif // COLWISE
+#ifdef CACHE
+	inf_message.append(", block-size is L1 Cache");
+#endif // CACHE
 
+	bool vectorization = false;
+	std::size_t l1_kb_size = 32; //Размер кэша L1 в Кб
     double time = 0.0;
     char in_path[100];
     char errors[500];
 	char alg_errors[200];
     char info[200];
 
-    std::vector<compute_params> prrbjrs_times(sizes.size() * (max_threads - start_thread));
-	std::vector<compute_params> colbnsvd_times(sizes.size() * (max_threads - start_thread));
-	std::vector<compute_params> prrbnsvd_times(sizes.size() * (max_threads - start_thread));
-	std::vector<compute_params> colbnsvd_avx_times(sizes.size() * (max_threads - start_thread));
-	std::vector<compute_params> prrbnsvd_avx_times(sizes.size() * (max_threads - start_thread));
-	std::vector<compute_params> rrbnsvd_avx_times(sizes.size() * (max_threads - start_thread));
+    std::vector<compute_params> prrbjrs_times(0);
+	std::vector<compute_params> colbnsvd_times(0);
+	std::vector<compute_params> prrbnsvd_times(0);
+	std::vector<compute_params> colbnsvd_avx_times(0);
+	std::vector<compute_params> prrbnsvd_avx_times(0);
+	std::vector<compute_params> rrbnsvd_avx_times(0);
 
 	std::cout << "Singular Value Decomposition" << std::endl;
 #ifdef PRRBJRS
+		std::cout << "\nParallel RRBJRS - 1D Blocked Jacobi with Round Robin pivoting";
 #ifdef COLWISE
-		std::cout << "\nParallel RRBJRS - 1D Blocked Jacobi with Round Robin pivoting, column wise storage" << std::endl;
+		std::cout << ", column wise storage";
 #else
-		std::cout << "\nParallel RRBJRS - 1D Blocked Jacobi with Round Robin pivoting, row wise storage" << std::endl;
+		std::cout << ", row wise storage";
 #endif
+#ifdef CACHE
+		std::cout << ", block-size is L1 Cache";
+#endif // CACHE
+		std::cout << std::endl;
 		for (std::size_t i = 0; i < sizes.size(); i++) {
 			m = sizes[i].i;
 			n = sizes[i].j;
@@ -82,7 +97,8 @@ int main(int argc, char* argv[])
 				std::cout << errors << std::endl;
 				continue;
 			}
-			for (std::size_t threads = start_thread; threads <= max_threads; threads++) {
+			for (std::size_t ind = 0; ind < threads_list.size(); ind++) {
+				std::size_t threads = threads_list[ind];
 				//rrbjrs - Блочный односторонний Якоби со стратегией выбора элементов Round Robin
 				try
 				{
@@ -110,11 +126,17 @@ int main(int argc, char* argv[])
 #endif
 
 #ifdef COLBNSVD
+		std::cout << "\nCOLBNSVD - 2D Blocked Jacobi";
 #ifdef COLWISE
-		std::cout << "\nCOLBNSVD - 2D Blocked Jacobi, column wise storage" << std::endl;
+		std::cout << ", column wise storage";
 #else
-		std::cout << "\nCOLBNSVD - 2D Blocked Jacobi, row wise storage" << std::endl;
+		std::cout << ", row wise storage";
 #endif
+#ifdef CACHE
+		std::cout << ", block-size is L1 Cache";
+#endif // CACHE
+		std::cout << std::endl;
+
 		for (std::size_t i = 0; i < sizes.size(); i++) {
 			m = sizes[i].i;
 			n = sizes[i].j;
@@ -156,7 +178,8 @@ int main(int argc, char* argv[])
 				std::cout << errors << std::endl;
 				continue;
 			}
-			for (std::size_t block_size = start_thread; block_size <= max_threads; block_size++) {
+			for (std::size_t ind = 0; ind < threads_list.size(); ind++) {
+				std::size_t block_size = threads_list[ind];
 				//colbnsvd - Блочный двусторонний Якоби с последовательным перебором по столбцам и заданным размером блока
 				try
 				{
@@ -185,11 +208,16 @@ int main(int argc, char* argv[])
 #endif
 
 #ifdef PRRBNSVD
- #ifdef COLWISE
-		std::cout << "\nParallel RRBNSVD - 2D Blocked Jacobi with Round Robin pivoting, column wise storage" << std::endl;
- #else
-		std::cout << "\nParallel RRBNSVD - 2D Blocked Jacobi with Round Robin pivoting, row wise storage" << std::endl;
- #endif
+		std::cout << "\nParallel RRBNSVD - 2D Blocked Jacobi with Round Robin pivoting";
+#ifdef COLWISE
+		std::cout << ", column wise storage";
+#else
+		std::cout << ", row wise storage";
+#endif
+#ifdef CACHE
+		std::cout << ", block-size is L1 Cache";
+#endif // CACHE
+		std::cout << std::endl;
 		for (std::size_t i = 0; i < sizes.size(); i++) {
 			m = sizes[i].i;
 			n = sizes[i].j;
@@ -231,13 +259,18 @@ int main(int argc, char* argv[])
 				std::cout << errors << std::endl;
 				continue;
 			}
-			for (std::size_t threads = start_thread; threads <= max_threads; threads++) {
+			for (std::size_t ind = 0; ind < threads_list.size(); ind++) {
+				std::size_t threads = threads_list[ind];
 				//rrbnsvd - Блочный двусторонний Якоби со стратегией выбора элементов Round Robin
 				try
 				{
 					*(Alg_Errors_str.len) = 0;
 					std::size_t rrbnsvd_iters;
+#ifdef CACHE
+					rrbnsvd_iters = rrbnsvd_parallel_cache(Data_matr, B_mat, U_mat, V_mat, l1_kb_size, vectorization, &time, Alg_Errors_str);
+#else
 					rrbnsvd_iters = rrbnsvd_parallel(Data_matr, B_mat, U_mat, V_mat, threads, vectorization, &time, Alg_Errors_str);
+#endif // CACHE
 					if (*(Alg_Errors_str.len) > 0) {
 						sprintf(errors, "[WARNING] not computed: %lu %lu, %lu threads. [%s]", m, n, threads, Alg_Errors_str.ptr);
 						std::cout << errors << std::endl;
@@ -261,11 +294,16 @@ int main(int argc, char* argv[])
 
 #ifdef COLBNSVD_AVX
 		vectorization = true;
+		std::cout << "\nCOLBNSVD AVX - 2D Blocked Jacobi";
 #ifdef COLWISE
-		std::cout << "\nCOLBNSVD AVX - 2D Blocked Jacobi, column wise storage" << std::endl;
+		std::cout << ", column wise storage";
 #else
-		std::cout << "\nCOLBNSVD AVX - 2D Blocked Jacobi, row wise storage" << std::endl;
+		std::cout << ", row wise storage";
 #endif
+#ifdef CACHE
+		std::cout << ", block-size is L1 Cache";
+#endif // CACHE
+		std::cout << std::endl;
 		for (std::size_t i = 0; i < sizes.size(); i++) {
 			m = sizes[i].i;
 			n = sizes[i].j;
@@ -307,7 +345,8 @@ int main(int argc, char* argv[])
 				std::cout << errors << std::endl;
 				continue;
 			}
-			for (std::size_t block_size = start_thread; block_size <= max_threads; block_size++) {
+			for (std::size_t ind = 0; ind < threads_list.size(); ind++) {
+				std::size_t block_size = threads_list[ind];
 				//colbnsvd - Блочный двусторонний Якоби с последовательным перебором по столбцам и заданным размером блока
 				try
 				{
@@ -338,11 +377,16 @@ int main(int argc, char* argv[])
 
 #ifdef PRRBNSVD_AVX
 		vectorization = true;
+		std::cout << "\nParallel RRBNSVD AVX - 2D Blocked Jacobi with Round Robin pivoting";
 #ifdef COLWISE
-		std::cout << "\nParallel RRBNSVD AVX - 2D Blocked Jacobi with Round Robin pivoting, column wise storage" << std::endl;
+		std::cout << ", column wise storage";
 #else
-		std::cout << "\nParallel RRBNSVD AVX - 2D Blocked Jacobi with Round Robin pivoting, row wise storage" << std::endl;
+		std::cout << ", row wise storage";
 #endif
+#ifdef CACHE
+		std::cout << ", block-size is L1 Cache";
+#endif // CACHE
+		std::cout << std::endl;
 		for (std::size_t i = 0; i < sizes.size(); i++) {
 			m = sizes[i].i;
 			n = sizes[i].j;
@@ -384,7 +428,8 @@ int main(int argc, char* argv[])
 				std::cout << errors << std::endl;
 				continue;
 			}
-			for (std::size_t threads = start_thread; threads <= max_threads; threads++) {
+			for (std::size_t ind = 0; ind < threads_list.size(); ind++) {
+				std::size_t threads = threads_list[ind];
 				//rrbnsvd - Блочный двусторонний Якоби со стратегией выбора элементов Round Robin
 				try
 				{
@@ -415,11 +460,16 @@ int main(int argc, char* argv[])
 
 #ifdef RRBNSVD_AVX
 		vectorization = true;
+		std::cout << "\nRRBNSVD AVX - 2D Blocked Jacobi with Round Robin pivoting";
 #ifdef COLWISE
-		std::cout << "\nRRBNSVD AVX - 2D Blocked Jacobi with Round Robin pivoting, column wise storage" << std::endl;
+		std::cout << ", column wise storage";
 #else
-		std::cout << "\nRRBNSVD AVX - 2D Blocked Jacobi with Round Robin pivoting, row wise storage" << std::endl;
+		std::cout << ", row wise storage";
 #endif
+#ifdef CACHE
+		std::cout << ", block-size is L1 Cache";
+#endif // CACHE
+		std::cout << std::endl;
 		for (std::size_t i = 0; i < sizes.size(); i++) {
 			m = sizes[i].i;
 			n = sizes[i].j;
@@ -461,7 +511,8 @@ int main(int argc, char* argv[])
 				std::cout << errors << std::endl;
 				continue;
 			}
-			for (std::size_t rr_pairs = start_thread; rr_pairs <= max_threads; rr_pairs++) {
+			for (std::size_t ind = 0; ind < threads_list.size(); ind++) {
+				std::size_t rr_pairs = threads_list[ind];
 				//rrbnsvd - Блочный двусторонний Якоби со стратегией выбора элементов Round Robin
 				try
 				{

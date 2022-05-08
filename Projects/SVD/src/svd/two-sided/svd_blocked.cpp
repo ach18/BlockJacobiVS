@@ -380,9 +380,8 @@ std::size_t rrbnsvd_parallel(struct matrix_t Amat, struct matrix_t Bmat, struct 
  * @param struct string_t errors информаци€ об ошибке
  * @return std::size_t sweeps число разверток методом якоби
  **/
-std::size_t rrbnsvd_parallel_cache(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat, struct matrix_t Vmat, std::size_t l1_kb_size, bool vectorization, double* Time, struct string_t errors)
+std::size_t rrbnsvd_parallel_cache(struct matrix_t Amat, struct matrix_t Bmat, struct matrix_t Umat, struct matrix_t Vmat, std::size_t* Threads, std::size_t l1_kb_size, bool vectorization, double* Time, struct string_t errors)
 {
-
 	std::size_t subproblem_blocks = 4; //число блоков, которое формирует подзадачу
 	std::size_t max_sweeps = 40; //максимальное число повторени€ итераций
 	std::size_t sweeps = 0;  //число повторений цикла развертки
@@ -409,6 +408,8 @@ std::size_t rrbnsvd_parallel_cache(struct matrix_t Amat, struct matrix_t Bmat, s
 		block_size = 45;
 	else if (l1_kb_size == 32)
 		block_size = 32;
+	else if (l1_kb_size == 512)
+		block_size = 128;
 	else {
 		*errors.len = sprintf(errors.ptr, "can't partition matrix by selected Cache");
 		return 0;
@@ -416,6 +417,7 @@ std::size_t rrbnsvd_parallel_cache(struct matrix_t Amat, struct matrix_t Bmat, s
 	std::size_t n_blocks = n / block_size; //число блоков вдоль строки/столбца
 	std::size_t rr_pairs = n_blocks / 2; //число пар индексов (по одному блоку на один поток)
 	std::size_t ThreadsNum = rr_pairs;
+	*Threads = ThreadsNum;
 
 	//общее число элементов всех блоков строки/столбца должно быть равно размерности матрицы
 	if ((n_blocks * block_size != n) || (rr_pairs * 2 != n_blocks)) {

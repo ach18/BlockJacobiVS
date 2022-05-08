@@ -11,8 +11,8 @@
 //#pragma GCC target("avx2")
 int main(int argc, char* argv[])
 {
-	std::vector<index_t> sizes = { {512, 512}, {1024, 1024} };
-	std::vector<std::size_t> threads_list = { 8, 16, 32 }; //список задаваемых потоков
+	std::vector<index_t> sizes = { {512, 512}, {1024, 1024}, {2048,2048}, {4096,4096}, {8192,8192} };
+	std::vector<std::size_t> threads_list = { 32 }; //список задаваемых потоков
 	std::size_t n; //Размер столбцов матрицы A(mxn)
     std::size_t m; //Размер строк матрицы A(mxn)
     std::size_t block_size; //Размер блока матрицы (минимум 10)
@@ -267,7 +267,7 @@ int main(int argc, char* argv[])
 					*(Alg_Errors_str.len) = 0;
 					std::size_t rrbnsvd_iters;
 #ifdef CACHE
-					rrbnsvd_iters = rrbnsvd_parallel_cache(Data_matr, B_mat, U_mat, V_mat, l1_kb_size, vectorization, &time, Alg_Errors_str);
+					rrbnsvd_iters = rrbnsvd_parallel_cache(Data_matr, B_mat, U_mat, V_mat, &threads, l1_kb_size, vectorization, &time, Alg_Errors_str);
 #else
 					rrbnsvd_iters = rrbnsvd_parallel(Data_matr, B_mat, U_mat, V_mat, threads, vectorization, &time, Alg_Errors_str);
 #endif // CACHE
@@ -435,7 +435,11 @@ int main(int argc, char* argv[])
 				{
 					*(Alg_Errors_str.len) = 0;
 					std::size_t rrbnsvd_iters;
+#ifdef CACHE
+					rrbnsvd_iters = rrbnsvd_parallel_cache(Data_matr, B_mat, U_mat, V_mat, &threads, l1_kb_size, vectorization, &time, Alg_Errors_str);
+#else
 					rrbnsvd_iters = rrbnsvd_parallel(Data_matr, B_mat, U_mat, V_mat, threads, vectorization, &time, Alg_Errors_str);
+#endif // CACHE
 					if (*(Alg_Errors_str.len) > 0) {
 						sprintf(errors, "[WARNING] not computed: %lu %lu, %lu threads. [%s]", m, n, threads, Alg_Errors_str.ptr);
 						std::cout << errors << std::endl;

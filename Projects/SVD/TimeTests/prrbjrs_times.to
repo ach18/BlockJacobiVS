@@ -1,0 +1,18 @@
+
+O2 ftree-vectorize, unaligned columns data store
+|rows|	|cols|	|threads|	|sweeps|	|time|
+
+512	512	16	15	2.166885	
+
+O2 ftree-vectorize, unaligned columns data store
+|rows|	|cols|	|threads|	|sweeps|	|time|
+
+512	512	16	15	2.518531	
+
+O2 ftree-vectorize, unaligned columns data store
+|rows|	|cols|	|threads|	|sweeps|	|time|
+
+
+O2 ftree-vectorize, unaligned columns data store
+|rows|	|cols|	|threads|	|sweeps|	|time|
+
